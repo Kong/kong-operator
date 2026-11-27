@@ -771,6 +771,172 @@ apiGroupVersions:
             resolvesTo: name
             refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
+          # Prompt- and resource-level ACLs, and the per-server defaults that
+          # back them, carry the same consumer group references as the tool
+          # ACLs above: `defaultPromptAcls` / `defaultResourceAcls` are plain
+          # objects on the listener variants' access arms, while a prompt's or
+          # a resource's `access.acls` lives inside the prompts / resources
+          # array elements of the variants that proxy to an upstream.
+          - path: spec.apiSpec.listener.access.consumer.defaultPromptAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.listener.access.consumer.defaultPromptAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.listener.access.consumer.defaultResourceAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.listener.access.consumer.defaultResourceAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.prompts.access.acls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.prompts.access.acls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.resources.access.acls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.resources.access.acls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.upstream-server.prompts.access.acls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.upstream-server.prompts.access.acls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.upstream-server.resources.access.acls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.upstream-server.resources.access.acls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayACLRef
+            supportCrossNamespaceReference: true
           # datastores are AIGatewayDatastore references (by metadata.name in
           # the same namespace, resolved to their Konnect names). A listener
           # holds one when it stores credentials in the Token Vault. Konnect

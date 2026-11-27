@@ -778,3 +778,62 @@ func TestAIGatewayMCPServerSDKPayload_FlattenedACLs(t *testing.T) {
 	require.Contains(t, string(data), `"allow_when":["has(principal)"]`)
 	require.NotContains(t, string(data), `"type":"allowWhen"`)
 }
+
+// TestAIGatewayMCPServer_ToAIGWMCPServer_DropsPromptAndResourceACLs pins that the
+// prompt and resource access-control surface, which the on-prem document cannot
+// express, is stripped before the payload is decoded into aigw.MCPServer instead
+// of being left in with its unresolved CR references. The strict decode proves
+// nothing unrecognized survives.
+func TestAIGatewayMCPServer_ToAIGWMCPServer_DropsPromptAndResourceACLs(t *testing.T) {
+	t.Parallel()
+
+	obj := &AIGatewayMCPServer{
+		Name: "sample-ai-gw-mcp-server", Namespace: "default",
+		Spec: AIGatewayMCPServerSpec{
+			APISpec: AIGatewayMCPServerAPISpec{
+				AIGatewayMCPServerConfig: &AIGatewayMCPServerConfig{
+					Type: AIGatewayMCPServerConfigTypePassthroughListener,
+					PassthroughListener: &AIGatewayMCPServerPassthroughListener{
+						Name:        "flights-proxy",
+						DisplayName: "Flights MCP Proxy",
+						Access: &AIGatewayMCPServerPassthroughListenerAccess{
+							AclAttributeType: AIGatewayMCPServerPassthroughListenerAccessTypeConsumer,
+							Consumer: &AIGatewayMCPServerListenerConsumer{
+								DefaultPromptAcls:   AIGatewayMCPACLs{Allow: []AIGatewayACLRef{{Name: "ai-gw-consumer-group"}}},
+								DefaultResourceAcls: AIGatewayMCPACLs{Deny: []AIGatewayACLRef{{Name: "ai-gw-consumer-group"}}},
+							},
+						},
+						Config: AIGatewayMCPServerWithUpstreamConfig{
+							URL:   "http://upstream:8080",
+							Route: AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp/flights"}},
+						},
+						Prompts: []AIGatewayMCPPrompt{{
+							Name: "summarize_flight",
+							Access: AIGatewayMCPPromptAccess{
+								Acls: AIGatewayMCPACLs{Allow: []AIGatewayACLRef{{Name: "ai-gw-consumer-group"}}},
+							},
+						}},
+						Resources: []AIGatewayMCPResource{{
+							URI: "file:///flights/schedule",
+							Access: AIGatewayMCPResourceAccess{
+								Acls: AIGatewayMCPACLs{Deny: []AIGatewayACLRef{{Name: "ai-gw-consumer-group"}}},
+							},
+						}},
+					},
+				},
+			},
+		},
+	}
+
+	data, err := obj.Spec.APISpec.marshalAIGWMCPServerPayload()
+	require.NoError(t, err)
+	for _, key := range []string{"prompts", "resources", "default_prompt_acls", "default_resource_acls"} {
+		require.NotContains(t, string(data), key, "on-prem payload still carries %q", key)
+	}
+
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	var mcp aigw.MCPServer
+	require.NoError(t, dec.Decode(&mcp))
+	require.Equal(t, "flights-proxy", mcp.Name)
+}

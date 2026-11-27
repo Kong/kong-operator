@@ -5725,6 +5725,2190 @@ func resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(ctx context.Cont
 	return resolved, nil
 }
 
+// RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow returns the references at spec.apiSpec.listener.access.consumer.defaultPromptAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.DefaultPromptAcls.Allow
+}
+
+// resolveAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow resolves the CR references in spec.apiSpec.listener.access.consumer.defaultPromptAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny returns the references at spec.apiSpec.listener.access.consumer.defaultPromptAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.DefaultPromptAcls.Deny
+}
+
+// resolveAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny resolves the CR references in spec.apiSpec.listener.access.consumer.defaultPromptAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow returns the references at spec.apiSpec.listener.access.consumer.defaultResourceAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.DefaultResourceAcls.Allow
+}
+
+// resolveAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow resolves the CR references in spec.apiSpec.listener.access.consumer.defaultResourceAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny returns the references at spec.apiSpec.listener.access.consumer.defaultResourceAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.DefaultResourceAcls.Deny
+}
+
+// resolveAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny resolves the CR references in spec.apiSpec.listener.access.consumer.defaultResourceAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow returns the references at spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.DefaultPromptAcls.Allow
+}
+
+// resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow resolves the CR references in spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny returns the references at spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.DefaultPromptAcls.Deny
+}
+
+// resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny resolves the CR references in spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow returns the references at spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.DefaultResourceAcls.Allow
+}
+
+// resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow resolves the CR references in spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny returns the references at spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.DefaultResourceAcls.Deny
+}
+
+// resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny resolves the CR references in spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow returns the references at spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.DefaultPromptAcls.Allow
+}
+
+// resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow resolves the CR references in spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny returns the references at spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.DefaultPromptAcls.Deny
+}
+
+// resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny resolves the CR references in spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow returns the references at spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.DefaultResourceAcls.Allow
+}
+
+// resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow resolves the CR references in spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny returns the references at spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.DefaultResourceAcls.Deny
+}
+
+// resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny resolves the CR references in spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow returns the references at spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.DefaultPromptAcls.Allow
+}
+
+// resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow resolves the CR references in spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny returns the references at spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.DefaultPromptAcls.Deny
+}
+
+// resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny resolves the CR references in spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow returns the references at spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.DefaultResourceAcls.Allow
+}
+
+// resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow resolves the CR references in spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny returns the references at spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.DefaultResourceAcls.Deny
+}
+
+// resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny resolves the CR references in spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow returns the references at spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.DefaultPromptAcls.Allow
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow resolves the CR references in spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny returns the references at spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.DefaultPromptAcls.Deny
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny resolves the CR references in spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow returns the references at spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.DefaultResourceAcls.Allow
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow resolves the CR references in spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny returns the references at spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.DefaultResourceAcls.Deny
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny resolves the CR references in spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow returns the references at spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.DefaultPromptAcls.Allow
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow resolves the CR references in spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny returns the references at spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.DefaultPromptAcls.Deny
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny resolves the CR references in spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow returns the references at spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.DefaultResourceAcls.Allow
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow resolves the CR references in spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny returns the references at spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.DefaultResourceAcls.Deny
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny resolves the CR references in spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerPromptsAccessAclsAllow returns the references at spec.apiSpec.passthrough-listener.prompts.access.acls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerPromptsAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	var refs [][]AIGatewayACLRef
+	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Prompts {
+		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Prompts[i].Access.Acls.Allow) == 0 {
+			continue
+		}
+		refs = append(refs, obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Prompts[i].Access.Acls.Allow)
+	}
+	return refs
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerPromptsAccessAclsAllow resolves the CR references in spec.apiSpec.passthrough-listener.prompts.access.acls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerPromptsAccessAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([][]string, error) {
+	groups := RefsAtAIGatewayMCPServerPassthroughListenerPromptsAccessAclsAllow(obj)
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			if ref.Name == "" {
+				errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+				continue
+			}
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
+				}
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
+			}
+			if referenced.GetKonnectID() == "" {
+				errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			group = append(group, referenced.GetKonnectName())
+		}
+		resolved = append(resolved, group)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerPromptsAccessAclsDeny returns the references at spec.apiSpec.passthrough-listener.prompts.access.acls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerPromptsAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	var refs [][]AIGatewayACLRef
+	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Prompts {
+		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Prompts[i].Access.Acls.Deny) == 0 {
+			continue
+		}
+		refs = append(refs, obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Prompts[i].Access.Acls.Deny)
+	}
+	return refs
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerPromptsAccessAclsDeny resolves the CR references in spec.apiSpec.passthrough-listener.prompts.access.acls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerPromptsAccessAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([][]string, error) {
+	groups := RefsAtAIGatewayMCPServerPassthroughListenerPromptsAccessAclsDeny(obj)
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			if ref.Name == "" {
+				errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+				continue
+			}
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
+				}
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
+			}
+			if referenced.GetKonnectID() == "" {
+				errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			group = append(group, referenced.GetKonnectName())
+		}
+		resolved = append(resolved, group)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerResourcesAccessAclsAllow returns the references at spec.apiSpec.passthrough-listener.resources.access.acls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerResourcesAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	var refs [][]AIGatewayACLRef
+	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Resources {
+		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Resources[i].Access.Acls.Allow) == 0 {
+			continue
+		}
+		refs = append(refs, obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Resources[i].Access.Acls.Allow)
+	}
+	return refs
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerResourcesAccessAclsAllow resolves the CR references in spec.apiSpec.passthrough-listener.resources.access.acls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerResourcesAccessAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([][]string, error) {
+	groups := RefsAtAIGatewayMCPServerPassthroughListenerResourcesAccessAclsAllow(obj)
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			if ref.Name == "" {
+				errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+				continue
+			}
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
+				}
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
+			}
+			if referenced.GetKonnectID() == "" {
+				errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			group = append(group, referenced.GetKonnectName())
+		}
+		resolved = append(resolved, group)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerResourcesAccessAclsDeny returns the references at spec.apiSpec.passthrough-listener.resources.access.acls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerResourcesAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	var refs [][]AIGatewayACLRef
+	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Resources {
+		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Resources[i].Access.Acls.Deny) == 0 {
+			continue
+		}
+		refs = append(refs, obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Resources[i].Access.Acls.Deny)
+	}
+	return refs
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerResourcesAccessAclsDeny resolves the CR references in spec.apiSpec.passthrough-listener.resources.access.acls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerResourcesAccessAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([][]string, error) {
+	groups := RefsAtAIGatewayMCPServerPassthroughListenerResourcesAccessAclsDeny(obj)
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			if ref.Name == "" {
+				errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+				continue
+			}
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
+				}
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
+			}
+			if referenced.GetKonnectID() == "" {
+				errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			group = append(group, referenced.GetKonnectName())
+		}
+		resolved = append(resolved, group)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerUpstreamServerPromptsAccessAclsAllow returns the references at spec.apiSpec.upstream-server.prompts.access.acls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerUpstreamServerPromptsAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer == nil {
+		return nil
+	}
+	var refs [][]AIGatewayACLRef
+	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Prompts {
+		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Prompts[i].Access.Acls.Allow) == 0 {
+			continue
+		}
+		refs = append(refs, obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Prompts[i].Access.Acls.Allow)
+	}
+	return refs
+}
+
+// resolveAIGatewayMCPServerUpstreamServerPromptsAccessAclsAllow resolves the CR references in spec.apiSpec.upstream-server.prompts.access.acls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerUpstreamServerPromptsAccessAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([][]string, error) {
+	groups := RefsAtAIGatewayMCPServerUpstreamServerPromptsAccessAclsAllow(obj)
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			if ref.Name == "" {
+				errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+				continue
+			}
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
+				}
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
+			}
+			if referenced.GetKonnectID() == "" {
+				errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			group = append(group, referenced.GetKonnectName())
+		}
+		resolved = append(resolved, group)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerUpstreamServerPromptsAccessAclsDeny returns the references at spec.apiSpec.upstream-server.prompts.access.acls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerUpstreamServerPromptsAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer == nil {
+		return nil
+	}
+	var refs [][]AIGatewayACLRef
+	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Prompts {
+		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Prompts[i].Access.Acls.Deny) == 0 {
+			continue
+		}
+		refs = append(refs, obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Prompts[i].Access.Acls.Deny)
+	}
+	return refs
+}
+
+// resolveAIGatewayMCPServerUpstreamServerPromptsAccessAclsDeny resolves the CR references in spec.apiSpec.upstream-server.prompts.access.acls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerUpstreamServerPromptsAccessAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([][]string, error) {
+	groups := RefsAtAIGatewayMCPServerUpstreamServerPromptsAccessAclsDeny(obj)
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			if ref.Name == "" {
+				errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+				continue
+			}
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
+				}
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
+			}
+			if referenced.GetKonnectID() == "" {
+				errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			group = append(group, referenced.GetKonnectName())
+		}
+		resolved = append(resolved, group)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerUpstreamServerResourcesAccessAclsAllow returns the references at spec.apiSpec.upstream-server.resources.access.acls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerUpstreamServerResourcesAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer == nil {
+		return nil
+	}
+	var refs [][]AIGatewayACLRef
+	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Resources {
+		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Resources[i].Access.Acls.Allow) == 0 {
+			continue
+		}
+		refs = append(refs, obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Resources[i].Access.Acls.Allow)
+	}
+	return refs
+}
+
+// resolveAIGatewayMCPServerUpstreamServerResourcesAccessAclsAllow resolves the CR references in spec.apiSpec.upstream-server.resources.access.acls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerUpstreamServerResourcesAccessAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([][]string, error) {
+	groups := RefsAtAIGatewayMCPServerUpstreamServerResourcesAccessAclsAllow(obj)
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			if ref.Name == "" {
+				errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+				continue
+			}
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
+				}
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
+			}
+			if referenced.GetKonnectID() == "" {
+				errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			group = append(group, referenced.GetKonnectName())
+		}
+		resolved = append(resolved, group)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerUpstreamServerResourcesAccessAclsDeny returns the references at spec.apiSpec.upstream-server.resources.access.acls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerUpstreamServerResourcesAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer == nil {
+		return nil
+	}
+	var refs [][]AIGatewayACLRef
+	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Resources {
+		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Resources[i].Access.Acls.Deny) == 0 {
+			continue
+		}
+		refs = append(refs, obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Resources[i].Access.Acls.Deny)
+	}
+	return refs
+}
+
+// resolveAIGatewayMCPServerUpstreamServerResourcesAccessAclsDeny resolves the CR references in spec.apiSpec.upstream-server.resources.access.acls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerUpstreamServerResourcesAccessAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([][]string, error) {
+	groups := RefsAtAIGatewayMCPServerUpstreamServerResourcesAccessAclsDeny(obj)
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			if ref.Name == "" {
+				errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+				continue
+			}
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
+				}
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
+			}
+			if referenced.GetKonnectID() == "" {
+				errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			group = append(group, referenced.GetKonnectName())
+		}
+		resolved = append(resolved, group)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
 // RefsAtAIGatewayMCPServerConversionListenerDatastores returns the references at spec.apiSpec.conversion-listener.datastores,
 // or nil when any ancestor is unset.
 func RefsAtAIGatewayMCPServerConversionListenerDatastores(obj *AIGatewayMCPServer) []AIGatewayDatastoreNamespacedRef {
@@ -6305,6 +8489,102 @@ func (obj *AIGatewayMCPServer) ResolveKonnectReferences(ctx context.Context, cl 
 		errs = append(errs, err)
 	}
 	if _, err := resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerPromptsAccessAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerPromptsAccessAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerResourcesAccessAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerResourcesAccessAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerUpstreamServerPromptsAccessAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerUpstreamServerPromptsAccessAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerUpstreamServerResourcesAccessAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerUpstreamServerResourcesAccessAclsDeny(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
 	if _, err := resolveAIGatewayMCPServerConversionListenerDatastores(ctx, cl, obj); err != nil {
@@ -7126,6 +9406,662 @@ func (obj *AIGatewayMCPServer) CrossNamespaceSiblingReferences() []CrossNamespac
 		}
 	}
 	for _, refs := range RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(obj) {
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			if ns == obj.GetNamespace() {
+				continue
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.Name,
+			})
+		}
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, refs := range RefsAtAIGatewayMCPServerPassthroughListenerPromptsAccessAclsAllow(obj) {
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			if ns == obj.GetNamespace() {
+				continue
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.Name,
+			})
+		}
+	}
+	for _, refs := range RefsAtAIGatewayMCPServerPassthroughListenerPromptsAccessAclsDeny(obj) {
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			if ns == obj.GetNamespace() {
+				continue
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.Name,
+			})
+		}
+	}
+	for _, refs := range RefsAtAIGatewayMCPServerPassthroughListenerResourcesAccessAclsAllow(obj) {
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			if ns == obj.GetNamespace() {
+				continue
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.Name,
+			})
+		}
+	}
+	for _, refs := range RefsAtAIGatewayMCPServerPassthroughListenerResourcesAccessAclsDeny(obj) {
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			if ns == obj.GetNamespace() {
+				continue
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.Name,
+			})
+		}
+	}
+	for _, refs := range RefsAtAIGatewayMCPServerUpstreamServerPromptsAccessAclsAllow(obj) {
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			if ns == obj.GetNamespace() {
+				continue
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.Name,
+			})
+		}
+	}
+	for _, refs := range RefsAtAIGatewayMCPServerUpstreamServerPromptsAccessAclsDeny(obj) {
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			if ns == obj.GetNamespace() {
+				continue
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.Name,
+			})
+		}
+	}
+	for _, refs := range RefsAtAIGatewayMCPServerUpstreamServerResourcesAccessAclsAllow(obj) {
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			if ns == obj.GetNamespace() {
+				continue
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.Name,
+			})
+		}
+	}
+	for _, refs := range RefsAtAIGatewayMCPServerUpstreamServerResourcesAccessAclsDeny(obj) {
 		for _, ref := range refs {
 			ns := ref.Namespace
 			if ns == "" {
@@ -8369,13 +11305,973 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		}
 		payload["upstream-server"] = upstreamServer4
 	}
+	// spec.apiSpec.listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+		listener9, _ := payload["listener"].(map[string]any)
+		if listener9 == nil {
+			listener9 = map[string]any{}
+		}
+		access23, _ := listener9["access"].(map[string]any)
+		if access23 == nil {
+			access23 = map[string]any{}
+		}
+		consumer10, _ := access23["consumer"].(map[string]any)
+		if consumer10 == nil {
+			consumer10 = map[string]any{}
+		}
+		defaultPromptAcls, _ := consumer10["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls == nil {
+			defaultPromptAcls = map[string]any{}
+		}
+		resolvedListenerAccessConsumerDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls["allow"] = resolvedListenerAccessConsumerDefaultPromptAclsAllow
+		consumer10["default_prompt_acls"] = defaultPromptAcls
+		access23["consumer"] = consumer10
+		listener9["access"] = access23
+		payload["listener"] = listener9
+	}
+	// spec.apiSpec.listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+		listener10, _ := payload["listener"].(map[string]any)
+		if listener10 == nil {
+			listener10 = map[string]any{}
+		}
+		access24, _ := listener10["access"].(map[string]any)
+		if access24 == nil {
+			access24 = map[string]any{}
+		}
+		consumer11, _ := access24["consumer"].(map[string]any)
+		if consumer11 == nil {
+			consumer11 = map[string]any{}
+		}
+		defaultPromptAcls2, _ := consumer11["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls2 == nil {
+			defaultPromptAcls2 = map[string]any{}
+		}
+		resolvedListenerAccessConsumerDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls2["deny"] = resolvedListenerAccessConsumerDefaultPromptAclsDeny
+		consumer11["default_prompt_acls"] = defaultPromptAcls2
+		access24["consumer"] = consumer11
+		listener10["access"] = access24
+		payload["listener"] = listener10
+	}
+	// spec.apiSpec.listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+		listener11, _ := payload["listener"].(map[string]any)
+		if listener11 == nil {
+			listener11 = map[string]any{}
+		}
+		access25, _ := listener11["access"].(map[string]any)
+		if access25 == nil {
+			access25 = map[string]any{}
+		}
+		consumer12, _ := access25["consumer"].(map[string]any)
+		if consumer12 == nil {
+			consumer12 = map[string]any{}
+		}
+		defaultResourceAcls, _ := consumer12["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls == nil {
+			defaultResourceAcls = map[string]any{}
+		}
+		resolvedListenerAccessConsumerDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls["allow"] = resolvedListenerAccessConsumerDefaultResourceAclsAllow
+		consumer12["default_resource_acls"] = defaultResourceAcls
+		access25["consumer"] = consumer12
+		listener11["access"] = access25
+		payload["listener"] = listener11
+	}
+	// spec.apiSpec.listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+		listener12, _ := payload["listener"].(map[string]any)
+		if listener12 == nil {
+			listener12 = map[string]any{}
+		}
+		access26, _ := listener12["access"].(map[string]any)
+		if access26 == nil {
+			access26 = map[string]any{}
+		}
+		consumer13, _ := access26["consumer"].(map[string]any)
+		if consumer13 == nil {
+			consumer13 = map[string]any{}
+		}
+		defaultResourceAcls2, _ := consumer13["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls2 == nil {
+			defaultResourceAcls2 = map[string]any{}
+		}
+		resolvedListenerAccessConsumerDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls2["deny"] = resolvedListenerAccessConsumerDefaultResourceAclsDeny
+		consumer13["default_resource_acls"] = defaultResourceAcls2
+		access26["consumer"] = consumer13
+		listener12["access"] = access26
+		payload["listener"] = listener12
+	}
+	// spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+		listener13, _ := payload["listener"].(map[string]any)
+		if listener13 == nil {
+			listener13 = map[string]any{}
+		}
+		access27, _ := listener13["access"].(map[string]any)
+		if access27 == nil {
+			access27 = map[string]any{}
+		}
+		oauthAccessToken10, _ := access27["oauth_access_token"].(map[string]any)
+		if oauthAccessToken10 == nil {
+			oauthAccessToken10 = map[string]any{}
+		}
+		defaultPromptAcls3, _ := oauthAccessToken10["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls3 == nil {
+			defaultPromptAcls3 = map[string]any{}
+		}
+		resolvedListenerAccessOauthAccessTokenDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls3["allow"] = resolvedListenerAccessOauthAccessTokenDefaultPromptAclsAllow
+		oauthAccessToken10["default_prompt_acls"] = defaultPromptAcls3
+		access27["oauth_access_token"] = oauthAccessToken10
+		listener13["access"] = access27
+		payload["listener"] = listener13
+	}
+	// spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+		listener14, _ := payload["listener"].(map[string]any)
+		if listener14 == nil {
+			listener14 = map[string]any{}
+		}
+		access28, _ := listener14["access"].(map[string]any)
+		if access28 == nil {
+			access28 = map[string]any{}
+		}
+		oauthAccessToken11, _ := access28["oauth_access_token"].(map[string]any)
+		if oauthAccessToken11 == nil {
+			oauthAccessToken11 = map[string]any{}
+		}
+		defaultPromptAcls4, _ := oauthAccessToken11["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls4 == nil {
+			defaultPromptAcls4 = map[string]any{}
+		}
+		resolvedListenerAccessOauthAccessTokenDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls4["deny"] = resolvedListenerAccessOauthAccessTokenDefaultPromptAclsDeny
+		oauthAccessToken11["default_prompt_acls"] = defaultPromptAcls4
+		access28["oauth_access_token"] = oauthAccessToken11
+		listener14["access"] = access28
+		payload["listener"] = listener14
+	}
+	// spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+		listener15, _ := payload["listener"].(map[string]any)
+		if listener15 == nil {
+			listener15 = map[string]any{}
+		}
+		access29, _ := listener15["access"].(map[string]any)
+		if access29 == nil {
+			access29 = map[string]any{}
+		}
+		oauthAccessToken12, _ := access29["oauth_access_token"].(map[string]any)
+		if oauthAccessToken12 == nil {
+			oauthAccessToken12 = map[string]any{}
+		}
+		defaultResourceAcls3, _ := oauthAccessToken12["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls3 == nil {
+			defaultResourceAcls3 = map[string]any{}
+		}
+		resolvedListenerAccessOauthAccessTokenDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls3["allow"] = resolvedListenerAccessOauthAccessTokenDefaultResourceAclsAllow
+		oauthAccessToken12["default_resource_acls"] = defaultResourceAcls3
+		access29["oauth_access_token"] = oauthAccessToken12
+		listener15["access"] = access29
+		payload["listener"] = listener15
+	}
+	// spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+		listener16, _ := payload["listener"].(map[string]any)
+		if listener16 == nil {
+			listener16 = map[string]any{}
+		}
+		access30, _ := listener16["access"].(map[string]any)
+		if access30 == nil {
+			access30 = map[string]any{}
+		}
+		oauthAccessToken13, _ := access30["oauth_access_token"].(map[string]any)
+		if oauthAccessToken13 == nil {
+			oauthAccessToken13 = map[string]any{}
+		}
+		defaultResourceAcls4, _ := oauthAccessToken13["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls4 == nil {
+			defaultResourceAcls4 = map[string]any{}
+		}
+		resolvedListenerAccessOauthAccessTokenDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls4["deny"] = resolvedListenerAccessOauthAccessTokenDefaultResourceAclsDeny
+		oauthAccessToken13["default_resource_acls"] = defaultResourceAcls4
+		access30["oauth_access_token"] = oauthAccessToken13
+		listener16["access"] = access30
+		payload["listener"] = listener16
+	}
+	// spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+		conversionListener11, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener11 == nil {
+			conversionListener11 = map[string]any{}
+		}
+		access31, _ := conversionListener11["access"].(map[string]any)
+		if access31 == nil {
+			access31 = map[string]any{}
+		}
+		consumer14, _ := access31["consumer"].(map[string]any)
+		if consumer14 == nil {
+			consumer14 = map[string]any{}
+		}
+		defaultPromptAcls5, _ := consumer14["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls5 == nil {
+			defaultPromptAcls5 = map[string]any{}
+		}
+		resolvedConversionListenerAccessConsumerDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls5["allow"] = resolvedConversionListenerAccessConsumerDefaultPromptAclsAllow
+		consumer14["default_prompt_acls"] = defaultPromptAcls5
+		access31["consumer"] = consumer14
+		conversionListener11["access"] = access31
+		payload["conversion-listener"] = conversionListener11
+	}
+	// spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+		conversionListener12, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener12 == nil {
+			conversionListener12 = map[string]any{}
+		}
+		access32, _ := conversionListener12["access"].(map[string]any)
+		if access32 == nil {
+			access32 = map[string]any{}
+		}
+		consumer15, _ := access32["consumer"].(map[string]any)
+		if consumer15 == nil {
+			consumer15 = map[string]any{}
+		}
+		defaultPromptAcls6, _ := consumer15["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls6 == nil {
+			defaultPromptAcls6 = map[string]any{}
+		}
+		resolvedConversionListenerAccessConsumerDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls6["deny"] = resolvedConversionListenerAccessConsumerDefaultPromptAclsDeny
+		consumer15["default_prompt_acls"] = defaultPromptAcls6
+		access32["consumer"] = consumer15
+		conversionListener12["access"] = access32
+		payload["conversion-listener"] = conversionListener12
+	}
+	// spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+		conversionListener13, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener13 == nil {
+			conversionListener13 = map[string]any{}
+		}
+		access33, _ := conversionListener13["access"].(map[string]any)
+		if access33 == nil {
+			access33 = map[string]any{}
+		}
+		consumer16, _ := access33["consumer"].(map[string]any)
+		if consumer16 == nil {
+			consumer16 = map[string]any{}
+		}
+		defaultResourceAcls5, _ := consumer16["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls5 == nil {
+			defaultResourceAcls5 = map[string]any{}
+		}
+		resolvedConversionListenerAccessConsumerDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls5["allow"] = resolvedConversionListenerAccessConsumerDefaultResourceAclsAllow
+		consumer16["default_resource_acls"] = defaultResourceAcls5
+		access33["consumer"] = consumer16
+		conversionListener13["access"] = access33
+		payload["conversion-listener"] = conversionListener13
+	}
+	// spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+		conversionListener14, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener14 == nil {
+			conversionListener14 = map[string]any{}
+		}
+		access34, _ := conversionListener14["access"].(map[string]any)
+		if access34 == nil {
+			access34 = map[string]any{}
+		}
+		consumer17, _ := access34["consumer"].(map[string]any)
+		if consumer17 == nil {
+			consumer17 = map[string]any{}
+		}
+		defaultResourceAcls6, _ := consumer17["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls6 == nil {
+			defaultResourceAcls6 = map[string]any{}
+		}
+		resolvedConversionListenerAccessConsumerDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls6["deny"] = resolvedConversionListenerAccessConsumerDefaultResourceAclsDeny
+		consumer17["default_resource_acls"] = defaultResourceAcls6
+		access34["consumer"] = consumer17
+		conversionListener14["access"] = access34
+		payload["conversion-listener"] = conversionListener14
+	}
+	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+		conversionListener15, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener15 == nil {
+			conversionListener15 = map[string]any{}
+		}
+		access35, _ := conversionListener15["access"].(map[string]any)
+		if access35 == nil {
+			access35 = map[string]any{}
+		}
+		oauthAccessToken14, _ := access35["oauth_access_token"].(map[string]any)
+		if oauthAccessToken14 == nil {
+			oauthAccessToken14 = map[string]any{}
+		}
+		defaultPromptAcls7, _ := oauthAccessToken14["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls7 == nil {
+			defaultPromptAcls7 = map[string]any{}
+		}
+		resolvedConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls7["allow"] = resolvedConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow
+		oauthAccessToken14["default_prompt_acls"] = defaultPromptAcls7
+		access35["oauth_access_token"] = oauthAccessToken14
+		conversionListener15["access"] = access35
+		payload["conversion-listener"] = conversionListener15
+	}
+	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+		conversionListener16, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener16 == nil {
+			conversionListener16 = map[string]any{}
+		}
+		access36, _ := conversionListener16["access"].(map[string]any)
+		if access36 == nil {
+			access36 = map[string]any{}
+		}
+		oauthAccessToken15, _ := access36["oauth_access_token"].(map[string]any)
+		if oauthAccessToken15 == nil {
+			oauthAccessToken15 = map[string]any{}
+		}
+		defaultPromptAcls8, _ := oauthAccessToken15["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls8 == nil {
+			defaultPromptAcls8 = map[string]any{}
+		}
+		resolvedConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls8["deny"] = resolvedConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny
+		oauthAccessToken15["default_prompt_acls"] = defaultPromptAcls8
+		access36["oauth_access_token"] = oauthAccessToken15
+		conversionListener16["access"] = access36
+		payload["conversion-listener"] = conversionListener16
+	}
+	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+		conversionListener17, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener17 == nil {
+			conversionListener17 = map[string]any{}
+		}
+		access37, _ := conversionListener17["access"].(map[string]any)
+		if access37 == nil {
+			access37 = map[string]any{}
+		}
+		oauthAccessToken16, _ := access37["oauth_access_token"].(map[string]any)
+		if oauthAccessToken16 == nil {
+			oauthAccessToken16 = map[string]any{}
+		}
+		defaultResourceAcls7, _ := oauthAccessToken16["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls7 == nil {
+			defaultResourceAcls7 = map[string]any{}
+		}
+		resolvedConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls7["allow"] = resolvedConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow
+		oauthAccessToken16["default_resource_acls"] = defaultResourceAcls7
+		access37["oauth_access_token"] = oauthAccessToken16
+		conversionListener17["access"] = access37
+		payload["conversion-listener"] = conversionListener17
+	}
+	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+		conversionListener18, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener18 == nil {
+			conversionListener18 = map[string]any{}
+		}
+		access38, _ := conversionListener18["access"].(map[string]any)
+		if access38 == nil {
+			access38 = map[string]any{}
+		}
+		oauthAccessToken17, _ := access38["oauth_access_token"].(map[string]any)
+		if oauthAccessToken17 == nil {
+			oauthAccessToken17 = map[string]any{}
+		}
+		defaultResourceAcls8, _ := oauthAccessToken17["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls8 == nil {
+			defaultResourceAcls8 = map[string]any{}
+		}
+		resolvedConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls8["deny"] = resolvedConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny
+		oauthAccessToken17["default_resource_acls"] = defaultResourceAcls8
+		access38["oauth_access_token"] = oauthAccessToken17
+		conversionListener18["access"] = access38
+		payload["conversion-listener"] = conversionListener18
+	}
+	// spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+		passthroughListener11, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener11 == nil {
+			passthroughListener11 = map[string]any{}
+		}
+		access39, _ := passthroughListener11["access"].(map[string]any)
+		if access39 == nil {
+			access39 = map[string]any{}
+		}
+		consumer18, _ := access39["consumer"].(map[string]any)
+		if consumer18 == nil {
+			consumer18 = map[string]any{}
+		}
+		defaultPromptAcls9, _ := consumer18["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls9 == nil {
+			defaultPromptAcls9 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessConsumerDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls9["allow"] = resolvedPassthroughListenerAccessConsumerDefaultPromptAclsAllow
+		consumer18["default_prompt_acls"] = defaultPromptAcls9
+		access39["consumer"] = consumer18
+		passthroughListener11["access"] = access39
+		payload["passthrough-listener"] = passthroughListener11
+	}
+	// spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+		passthroughListener12, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener12 == nil {
+			passthroughListener12 = map[string]any{}
+		}
+		access40, _ := passthroughListener12["access"].(map[string]any)
+		if access40 == nil {
+			access40 = map[string]any{}
+		}
+		consumer19, _ := access40["consumer"].(map[string]any)
+		if consumer19 == nil {
+			consumer19 = map[string]any{}
+		}
+		defaultPromptAcls10, _ := consumer19["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls10 == nil {
+			defaultPromptAcls10 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessConsumerDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls10["deny"] = resolvedPassthroughListenerAccessConsumerDefaultPromptAclsDeny
+		consumer19["default_prompt_acls"] = defaultPromptAcls10
+		access40["consumer"] = consumer19
+		passthroughListener12["access"] = access40
+		payload["passthrough-listener"] = passthroughListener12
+	}
+	// spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+		passthroughListener13, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener13 == nil {
+			passthroughListener13 = map[string]any{}
+		}
+		access41, _ := passthroughListener13["access"].(map[string]any)
+		if access41 == nil {
+			access41 = map[string]any{}
+		}
+		consumer20, _ := access41["consumer"].(map[string]any)
+		if consumer20 == nil {
+			consumer20 = map[string]any{}
+		}
+		defaultResourceAcls9, _ := consumer20["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls9 == nil {
+			defaultResourceAcls9 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessConsumerDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls9["allow"] = resolvedPassthroughListenerAccessConsumerDefaultResourceAclsAllow
+		consumer20["default_resource_acls"] = defaultResourceAcls9
+		access41["consumer"] = consumer20
+		passthroughListener13["access"] = access41
+		payload["passthrough-listener"] = passthroughListener13
+	}
+	// spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+		passthroughListener14, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener14 == nil {
+			passthroughListener14 = map[string]any{}
+		}
+		access42, _ := passthroughListener14["access"].(map[string]any)
+		if access42 == nil {
+			access42 = map[string]any{}
+		}
+		consumer21, _ := access42["consumer"].(map[string]any)
+		if consumer21 == nil {
+			consumer21 = map[string]any{}
+		}
+		defaultResourceAcls10, _ := consumer21["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls10 == nil {
+			defaultResourceAcls10 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessConsumerDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls10["deny"] = resolvedPassthroughListenerAccessConsumerDefaultResourceAclsDeny
+		consumer21["default_resource_acls"] = defaultResourceAcls10
+		access42["consumer"] = consumer21
+		passthroughListener14["access"] = access42
+		payload["passthrough-listener"] = passthroughListener14
+	}
+	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+		passthroughListener15, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener15 == nil {
+			passthroughListener15 = map[string]any{}
+		}
+		access43, _ := passthroughListener15["access"].(map[string]any)
+		if access43 == nil {
+			access43 = map[string]any{}
+		}
+		oauthAccessToken18, _ := access43["oauth_access_token"].(map[string]any)
+		if oauthAccessToken18 == nil {
+			oauthAccessToken18 = map[string]any{}
+		}
+		defaultPromptAcls11, _ := oauthAccessToken18["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls11 == nil {
+			defaultPromptAcls11 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls11["allow"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow
+		oauthAccessToken18["default_prompt_acls"] = defaultPromptAcls11
+		access43["oauth_access_token"] = oauthAccessToken18
+		passthroughListener15["access"] = access43
+		payload["passthrough-listener"] = passthroughListener15
+	}
+	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+		passthroughListener16, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener16 == nil {
+			passthroughListener16 = map[string]any{}
+		}
+		access44, _ := passthroughListener16["access"].(map[string]any)
+		if access44 == nil {
+			access44 = map[string]any{}
+		}
+		oauthAccessToken19, _ := access44["oauth_access_token"].(map[string]any)
+		if oauthAccessToken19 == nil {
+			oauthAccessToken19 = map[string]any{}
+		}
+		defaultPromptAcls12, _ := oauthAccessToken19["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls12 == nil {
+			defaultPromptAcls12 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls12["deny"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny
+		oauthAccessToken19["default_prompt_acls"] = defaultPromptAcls12
+		access44["oauth_access_token"] = oauthAccessToken19
+		passthroughListener16["access"] = access44
+		payload["passthrough-listener"] = passthroughListener16
+	}
+	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+		passthroughListener17, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener17 == nil {
+			passthroughListener17 = map[string]any{}
+		}
+		access45, _ := passthroughListener17["access"].(map[string]any)
+		if access45 == nil {
+			access45 = map[string]any{}
+		}
+		oauthAccessToken20, _ := access45["oauth_access_token"].(map[string]any)
+		if oauthAccessToken20 == nil {
+			oauthAccessToken20 = map[string]any{}
+		}
+		defaultResourceAcls11, _ := oauthAccessToken20["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls11 == nil {
+			defaultResourceAcls11 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls11["allow"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow
+		oauthAccessToken20["default_resource_acls"] = defaultResourceAcls11
+		access45["oauth_access_token"] = oauthAccessToken20
+		passthroughListener17["access"] = access45
+		payload["passthrough-listener"] = passthroughListener17
+	}
+	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+		passthroughListener18, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener18 == nil {
+			passthroughListener18 = map[string]any{}
+		}
+		access46, _ := passthroughListener18["access"].(map[string]any)
+		if access46 == nil {
+			access46 = map[string]any{}
+		}
+		oauthAccessToken21, _ := access46["oauth_access_token"].(map[string]any)
+		if oauthAccessToken21 == nil {
+			oauthAccessToken21 = map[string]any{}
+		}
+		defaultResourceAcls12, _ := oauthAccessToken21["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls12 == nil {
+			defaultResourceAcls12 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls12["deny"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny
+		oauthAccessToken21["default_resource_acls"] = defaultResourceAcls12
+		access46["oauth_access_token"] = oauthAccessToken21
+		passthroughListener18["access"] = access46
+		payload["passthrough-listener"] = passthroughListener18
+	}
+	// spec.apiSpec.passthrough-listener.prompts.access.acls.allow carries a CR reference: inject the resolved Konnect values into
+	// each element of the "prompts" array in the SDK payload, preserving
+	// sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
+		passthroughListener19, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener19 == nil {
+			passthroughListener19 = map[string]any{}
+		}
+		resolvedPassthroughListenerPromptsAccessAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerPromptsAccessAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.prompts.access.acls.allow references: %w", err)
+		}
+		if arr, ok := passthroughListener19["prompts"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access47, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls5, ok := access47["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls5["allow"]; !has {
+					continue
+				}
+				if ri < len(resolvedPassthroughListenerPromptsAccessAclsAllow) {
+					acls5["allow"] = resolvedPassthroughListenerPromptsAccessAclsAllow[ri]
+					ri++
+				}
+			}
+		}
+		resolvedPassthroughListenerPromptsAccessAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerPromptsAccessAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.prompts.access.acls.deny references: %w", err)
+		}
+		if arr, ok := passthroughListener19["prompts"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access47, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls5, ok := access47["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls5["deny"]; !has {
+					continue
+				}
+				if ri < len(resolvedPassthroughListenerPromptsAccessAclsDeny) {
+					acls5["deny"] = resolvedPassthroughListenerPromptsAccessAclsDeny[ri]
+					ri++
+				}
+			}
+		}
+		payload["passthrough-listener"] = passthroughListener19
+	}
+	// spec.apiSpec.passthrough-listener.resources.access.acls.allow carries a CR reference: inject the resolved Konnect values into
+	// each element of the "resources" array in the SDK payload, preserving
+	// sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
+		passthroughListener20, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener20 == nil {
+			passthroughListener20 = map[string]any{}
+		}
+		resolvedPassthroughListenerResourcesAccessAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerResourcesAccessAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.resources.access.acls.allow references: %w", err)
+		}
+		if arr, ok := passthroughListener20["resources"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access48, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls6, ok := access48["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls6["allow"]; !has {
+					continue
+				}
+				if ri < len(resolvedPassthroughListenerResourcesAccessAclsAllow) {
+					acls6["allow"] = resolvedPassthroughListenerResourcesAccessAclsAllow[ri]
+					ri++
+				}
+			}
+		}
+		resolvedPassthroughListenerResourcesAccessAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerResourcesAccessAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.resources.access.acls.deny references: %w", err)
+		}
+		if arr, ok := passthroughListener20["resources"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access48, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls6, ok := access48["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls6["deny"]; !has {
+					continue
+				}
+				if ri < len(resolvedPassthroughListenerResourcesAccessAclsDeny) {
+					acls6["deny"] = resolvedPassthroughListenerResourcesAccessAclsDeny[ri]
+					ri++
+				}
+			}
+		}
+		payload["passthrough-listener"] = passthroughListener20
+	}
+	// spec.apiSpec.upstream-server.prompts.access.acls.allow carries a CR reference: inject the resolved Konnect values into
+	// each element of the "prompts" array in the SDK payload, preserving
+	// sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
+		upstreamServer5, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer5 == nil {
+			upstreamServer5 = map[string]any{}
+		}
+		resolvedUpstreamServerPromptsAccessAclsAllow, err := resolveAIGatewayMCPServerUpstreamServerPromptsAccessAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.prompts.access.acls.allow references: %w", err)
+		}
+		if arr, ok := upstreamServer5["prompts"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access49, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls7, ok := access49["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls7["allow"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerPromptsAccessAclsAllow) {
+					acls7["allow"] = resolvedUpstreamServerPromptsAccessAclsAllow[ri]
+					ri++
+				}
+			}
+		}
+		resolvedUpstreamServerPromptsAccessAclsDeny, err := resolveAIGatewayMCPServerUpstreamServerPromptsAccessAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.prompts.access.acls.deny references: %w", err)
+		}
+		if arr, ok := upstreamServer5["prompts"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access49, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls7, ok := access49["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls7["deny"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerPromptsAccessAclsDeny) {
+					acls7["deny"] = resolvedUpstreamServerPromptsAccessAclsDeny[ri]
+					ri++
+				}
+			}
+		}
+		payload["upstream-server"] = upstreamServer5
+	}
+	// spec.apiSpec.upstream-server.resources.access.acls.allow carries a CR reference: inject the resolved Konnect values into
+	// each element of the "resources" array in the SDK payload, preserving
+	// sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
+		upstreamServer6, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer6 == nil {
+			upstreamServer6 = map[string]any{}
+		}
+		resolvedUpstreamServerResourcesAccessAclsAllow, err := resolveAIGatewayMCPServerUpstreamServerResourcesAccessAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.resources.access.acls.allow references: %w", err)
+		}
+		if arr, ok := upstreamServer6["resources"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access50, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls8, ok := access50["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls8["allow"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerResourcesAccessAclsAllow) {
+					acls8["allow"] = resolvedUpstreamServerResourcesAccessAclsAllow[ri]
+					ri++
+				}
+			}
+		}
+		resolvedUpstreamServerResourcesAccessAclsDeny, err := resolveAIGatewayMCPServerUpstreamServerResourcesAccessAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.resources.access.acls.deny references: %w", err)
+		}
+		if arr, ok := upstreamServer6["resources"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access50, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls8, ok := access50["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls8["deny"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerResourcesAccessAclsDeny) {
+					acls8["deny"] = resolvedUpstreamServerResourcesAccessAclsDeny[ri]
+					ri++
+				}
+			}
+		}
+		payload["upstream-server"] = upstreamServer6
+	}
 	// spec.apiSpec.conversion-listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
 	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
-		conversionListener11, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener11 == nil {
-			conversionListener11 = map[string]any{}
+		conversionListener19, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener19 == nil {
+			conversionListener19 = map[string]any{}
 		}
 		resolvedConversionListenerDatastores, err := resolveAIGatewayMCPServerConversionListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -8385,8 +12281,8 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedConversionListenerDatastores {
 			wrappedConversionListenerDatastores = append(wrappedConversionListenerDatastores, map[string]string{"name": v})
 		}
-		conversionListener11["datastores"] = wrappedConversionListenerDatastores
-		payload["conversion-listener"] = conversionListener11
+		conversionListener19["datastores"] = wrappedConversionListenerDatastores
+		payload["conversion-listener"] = conversionListener19
 	}
 	// spec.apiSpec.conversion-only.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
@@ -8411,9 +12307,9 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// object per resolved Konnect value, each keeping the OAS item shape and
 	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
-		listener9, _ := payload["listener"].(map[string]any)
-		if listener9 == nil {
-			listener9 = map[string]any{}
+		listener17, _ := payload["listener"].(map[string]any)
+		if listener17 == nil {
+			listener17 = map[string]any{}
 		}
 		resolvedListenerDatastores, err := resolveAIGatewayMCPServerListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -8423,16 +12319,16 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedListenerDatastores {
 			wrappedListenerDatastores = append(wrappedListenerDatastores, map[string]string{"name": v})
 		}
-		listener9["datastores"] = wrappedListenerDatastores
-		payload["listener"] = listener9
+		listener17["datastores"] = wrappedListenerDatastores
+		payload["listener"] = listener17
 	}
 	// spec.apiSpec.passthrough-listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
 	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
-		passthroughListener11, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener11 == nil {
-			passthroughListener11 = map[string]any{}
+		passthroughListener21, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener21 == nil {
+			passthroughListener21 = map[string]any{}
 		}
 		resolvedPassthroughListenerDatastores, err := resolveAIGatewayMCPServerPassthroughListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -8442,16 +12338,16 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedPassthroughListenerDatastores {
 			wrappedPassthroughListenerDatastores = append(wrappedPassthroughListenerDatastores, map[string]string{"name": v})
 		}
-		passthroughListener11["datastores"] = wrappedPassthroughListenerDatastores
-		payload["passthrough-listener"] = passthroughListener11
+		passthroughListener21["datastores"] = wrappedPassthroughListenerDatastores
+		payload["passthrough-listener"] = passthroughListener21
 	}
 	// spec.apiSpec.upstream-server.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
 	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
-		upstreamServer5, _ := payload["upstream-server"].(map[string]any)
-		if upstreamServer5 == nil {
-			upstreamServer5 = map[string]any{}
+		upstreamServer7, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer7 == nil {
+			upstreamServer7 = map[string]any{}
 		}
 		resolvedUpstreamServerDatastores, err := resolveAIGatewayMCPServerUpstreamServerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -8461,8 +12357,8 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedUpstreamServerDatastores {
 			wrappedUpstreamServerDatastores = append(wrappedUpstreamServerDatastores, map[string]string{"name": v})
 		}
-		upstreamServer5["datastores"] = wrappedUpstreamServerDatastores
-		payload["upstream-server"] = upstreamServer5
+		upstreamServer7["datastores"] = wrappedUpstreamServerDatastores
+		payload["upstream-server"] = upstreamServer7
 	}
 	return spec.toCreateAIGatewayMCPServerRequestFromPayload(payload)
 }
@@ -9686,13 +13582,973 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		}
 		payload["upstream-server"] = upstreamServer4
 	}
+	// spec.apiSpec.listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+		listener9, _ := payload["listener"].(map[string]any)
+		if listener9 == nil {
+			listener9 = map[string]any{}
+		}
+		access23, _ := listener9["access"].(map[string]any)
+		if access23 == nil {
+			access23 = map[string]any{}
+		}
+		consumer10, _ := access23["consumer"].(map[string]any)
+		if consumer10 == nil {
+			consumer10 = map[string]any{}
+		}
+		defaultPromptAcls, _ := consumer10["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls == nil {
+			defaultPromptAcls = map[string]any{}
+		}
+		resolvedListenerAccessConsumerDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls["allow"] = resolvedListenerAccessConsumerDefaultPromptAclsAllow
+		consumer10["default_prompt_acls"] = defaultPromptAcls
+		access23["consumer"] = consumer10
+		listener9["access"] = access23
+		payload["listener"] = listener9
+	}
+	// spec.apiSpec.listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+		listener10, _ := payload["listener"].(map[string]any)
+		if listener10 == nil {
+			listener10 = map[string]any{}
+		}
+		access24, _ := listener10["access"].(map[string]any)
+		if access24 == nil {
+			access24 = map[string]any{}
+		}
+		consumer11, _ := access24["consumer"].(map[string]any)
+		if consumer11 == nil {
+			consumer11 = map[string]any{}
+		}
+		defaultPromptAcls2, _ := consumer11["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls2 == nil {
+			defaultPromptAcls2 = map[string]any{}
+		}
+		resolvedListenerAccessConsumerDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls2["deny"] = resolvedListenerAccessConsumerDefaultPromptAclsDeny
+		consumer11["default_prompt_acls"] = defaultPromptAcls2
+		access24["consumer"] = consumer11
+		listener10["access"] = access24
+		payload["listener"] = listener10
+	}
+	// spec.apiSpec.listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+		listener11, _ := payload["listener"].(map[string]any)
+		if listener11 == nil {
+			listener11 = map[string]any{}
+		}
+		access25, _ := listener11["access"].(map[string]any)
+		if access25 == nil {
+			access25 = map[string]any{}
+		}
+		consumer12, _ := access25["consumer"].(map[string]any)
+		if consumer12 == nil {
+			consumer12 = map[string]any{}
+		}
+		defaultResourceAcls, _ := consumer12["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls == nil {
+			defaultResourceAcls = map[string]any{}
+		}
+		resolvedListenerAccessConsumerDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls["allow"] = resolvedListenerAccessConsumerDefaultResourceAclsAllow
+		consumer12["default_resource_acls"] = defaultResourceAcls
+		access25["consumer"] = consumer12
+		listener11["access"] = access25
+		payload["listener"] = listener11
+	}
+	// spec.apiSpec.listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+		listener12, _ := payload["listener"].(map[string]any)
+		if listener12 == nil {
+			listener12 = map[string]any{}
+		}
+		access26, _ := listener12["access"].(map[string]any)
+		if access26 == nil {
+			access26 = map[string]any{}
+		}
+		consumer13, _ := access26["consumer"].(map[string]any)
+		if consumer13 == nil {
+			consumer13 = map[string]any{}
+		}
+		defaultResourceAcls2, _ := consumer13["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls2 == nil {
+			defaultResourceAcls2 = map[string]any{}
+		}
+		resolvedListenerAccessConsumerDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls2["deny"] = resolvedListenerAccessConsumerDefaultResourceAclsDeny
+		consumer13["default_resource_acls"] = defaultResourceAcls2
+		access26["consumer"] = consumer13
+		listener12["access"] = access26
+		payload["listener"] = listener12
+	}
+	// spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+		listener13, _ := payload["listener"].(map[string]any)
+		if listener13 == nil {
+			listener13 = map[string]any{}
+		}
+		access27, _ := listener13["access"].(map[string]any)
+		if access27 == nil {
+			access27 = map[string]any{}
+		}
+		oauthAccessToken10, _ := access27["oauth_access_token"].(map[string]any)
+		if oauthAccessToken10 == nil {
+			oauthAccessToken10 = map[string]any{}
+		}
+		defaultPromptAcls3, _ := oauthAccessToken10["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls3 == nil {
+			defaultPromptAcls3 = map[string]any{}
+		}
+		resolvedListenerAccessOauthAccessTokenDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls3["allow"] = resolvedListenerAccessOauthAccessTokenDefaultPromptAclsAllow
+		oauthAccessToken10["default_prompt_acls"] = defaultPromptAcls3
+		access27["oauth_access_token"] = oauthAccessToken10
+		listener13["access"] = access27
+		payload["listener"] = listener13
+	}
+	// spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+		listener14, _ := payload["listener"].(map[string]any)
+		if listener14 == nil {
+			listener14 = map[string]any{}
+		}
+		access28, _ := listener14["access"].(map[string]any)
+		if access28 == nil {
+			access28 = map[string]any{}
+		}
+		oauthAccessToken11, _ := access28["oauth_access_token"].(map[string]any)
+		if oauthAccessToken11 == nil {
+			oauthAccessToken11 = map[string]any{}
+		}
+		defaultPromptAcls4, _ := oauthAccessToken11["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls4 == nil {
+			defaultPromptAcls4 = map[string]any{}
+		}
+		resolvedListenerAccessOauthAccessTokenDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls4["deny"] = resolvedListenerAccessOauthAccessTokenDefaultPromptAclsDeny
+		oauthAccessToken11["default_prompt_acls"] = defaultPromptAcls4
+		access28["oauth_access_token"] = oauthAccessToken11
+		listener14["access"] = access28
+		payload["listener"] = listener14
+	}
+	// spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+		listener15, _ := payload["listener"].(map[string]any)
+		if listener15 == nil {
+			listener15 = map[string]any{}
+		}
+		access29, _ := listener15["access"].(map[string]any)
+		if access29 == nil {
+			access29 = map[string]any{}
+		}
+		oauthAccessToken12, _ := access29["oauth_access_token"].(map[string]any)
+		if oauthAccessToken12 == nil {
+			oauthAccessToken12 = map[string]any{}
+		}
+		defaultResourceAcls3, _ := oauthAccessToken12["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls3 == nil {
+			defaultResourceAcls3 = map[string]any{}
+		}
+		resolvedListenerAccessOauthAccessTokenDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls3["allow"] = resolvedListenerAccessOauthAccessTokenDefaultResourceAclsAllow
+		oauthAccessToken12["default_resource_acls"] = defaultResourceAcls3
+		access29["oauth_access_token"] = oauthAccessToken12
+		listener15["access"] = access29
+		payload["listener"] = listener15
+	}
+	// spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+		listener16, _ := payload["listener"].(map[string]any)
+		if listener16 == nil {
+			listener16 = map[string]any{}
+		}
+		access30, _ := listener16["access"].(map[string]any)
+		if access30 == nil {
+			access30 = map[string]any{}
+		}
+		oauthAccessToken13, _ := access30["oauth_access_token"].(map[string]any)
+		if oauthAccessToken13 == nil {
+			oauthAccessToken13 = map[string]any{}
+		}
+		defaultResourceAcls4, _ := oauthAccessToken13["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls4 == nil {
+			defaultResourceAcls4 = map[string]any{}
+		}
+		resolvedListenerAccessOauthAccessTokenDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls4["deny"] = resolvedListenerAccessOauthAccessTokenDefaultResourceAclsDeny
+		oauthAccessToken13["default_resource_acls"] = defaultResourceAcls4
+		access30["oauth_access_token"] = oauthAccessToken13
+		listener16["access"] = access30
+		payload["listener"] = listener16
+	}
+	// spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+		conversionListener11, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener11 == nil {
+			conversionListener11 = map[string]any{}
+		}
+		access31, _ := conversionListener11["access"].(map[string]any)
+		if access31 == nil {
+			access31 = map[string]any{}
+		}
+		consumer14, _ := access31["consumer"].(map[string]any)
+		if consumer14 == nil {
+			consumer14 = map[string]any{}
+		}
+		defaultPromptAcls5, _ := consumer14["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls5 == nil {
+			defaultPromptAcls5 = map[string]any{}
+		}
+		resolvedConversionListenerAccessConsumerDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls5["allow"] = resolvedConversionListenerAccessConsumerDefaultPromptAclsAllow
+		consumer14["default_prompt_acls"] = defaultPromptAcls5
+		access31["consumer"] = consumer14
+		conversionListener11["access"] = access31
+		payload["conversion-listener"] = conversionListener11
+	}
+	// spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+		conversionListener12, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener12 == nil {
+			conversionListener12 = map[string]any{}
+		}
+		access32, _ := conversionListener12["access"].(map[string]any)
+		if access32 == nil {
+			access32 = map[string]any{}
+		}
+		consumer15, _ := access32["consumer"].(map[string]any)
+		if consumer15 == nil {
+			consumer15 = map[string]any{}
+		}
+		defaultPromptAcls6, _ := consumer15["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls6 == nil {
+			defaultPromptAcls6 = map[string]any{}
+		}
+		resolvedConversionListenerAccessConsumerDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls6["deny"] = resolvedConversionListenerAccessConsumerDefaultPromptAclsDeny
+		consumer15["default_prompt_acls"] = defaultPromptAcls6
+		access32["consumer"] = consumer15
+		conversionListener12["access"] = access32
+		payload["conversion-listener"] = conversionListener12
+	}
+	// spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+		conversionListener13, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener13 == nil {
+			conversionListener13 = map[string]any{}
+		}
+		access33, _ := conversionListener13["access"].(map[string]any)
+		if access33 == nil {
+			access33 = map[string]any{}
+		}
+		consumer16, _ := access33["consumer"].(map[string]any)
+		if consumer16 == nil {
+			consumer16 = map[string]any{}
+		}
+		defaultResourceAcls5, _ := consumer16["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls5 == nil {
+			defaultResourceAcls5 = map[string]any{}
+		}
+		resolvedConversionListenerAccessConsumerDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls5["allow"] = resolvedConversionListenerAccessConsumerDefaultResourceAclsAllow
+		consumer16["default_resource_acls"] = defaultResourceAcls5
+		access33["consumer"] = consumer16
+		conversionListener13["access"] = access33
+		payload["conversion-listener"] = conversionListener13
+	}
+	// spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+		conversionListener14, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener14 == nil {
+			conversionListener14 = map[string]any{}
+		}
+		access34, _ := conversionListener14["access"].(map[string]any)
+		if access34 == nil {
+			access34 = map[string]any{}
+		}
+		consumer17, _ := access34["consumer"].(map[string]any)
+		if consumer17 == nil {
+			consumer17 = map[string]any{}
+		}
+		defaultResourceAcls6, _ := consumer17["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls6 == nil {
+			defaultResourceAcls6 = map[string]any{}
+		}
+		resolvedConversionListenerAccessConsumerDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls6["deny"] = resolvedConversionListenerAccessConsumerDefaultResourceAclsDeny
+		consumer17["default_resource_acls"] = defaultResourceAcls6
+		access34["consumer"] = consumer17
+		conversionListener14["access"] = access34
+		payload["conversion-listener"] = conversionListener14
+	}
+	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+		conversionListener15, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener15 == nil {
+			conversionListener15 = map[string]any{}
+		}
+		access35, _ := conversionListener15["access"].(map[string]any)
+		if access35 == nil {
+			access35 = map[string]any{}
+		}
+		oauthAccessToken14, _ := access35["oauth_access_token"].(map[string]any)
+		if oauthAccessToken14 == nil {
+			oauthAccessToken14 = map[string]any{}
+		}
+		defaultPromptAcls7, _ := oauthAccessToken14["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls7 == nil {
+			defaultPromptAcls7 = map[string]any{}
+		}
+		resolvedConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls7["allow"] = resolvedConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow
+		oauthAccessToken14["default_prompt_acls"] = defaultPromptAcls7
+		access35["oauth_access_token"] = oauthAccessToken14
+		conversionListener15["access"] = access35
+		payload["conversion-listener"] = conversionListener15
+	}
+	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+		conversionListener16, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener16 == nil {
+			conversionListener16 = map[string]any{}
+		}
+		access36, _ := conversionListener16["access"].(map[string]any)
+		if access36 == nil {
+			access36 = map[string]any{}
+		}
+		oauthAccessToken15, _ := access36["oauth_access_token"].(map[string]any)
+		if oauthAccessToken15 == nil {
+			oauthAccessToken15 = map[string]any{}
+		}
+		defaultPromptAcls8, _ := oauthAccessToken15["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls8 == nil {
+			defaultPromptAcls8 = map[string]any{}
+		}
+		resolvedConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls8["deny"] = resolvedConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny
+		oauthAccessToken15["default_prompt_acls"] = defaultPromptAcls8
+		access36["oauth_access_token"] = oauthAccessToken15
+		conversionListener16["access"] = access36
+		payload["conversion-listener"] = conversionListener16
+	}
+	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+		conversionListener17, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener17 == nil {
+			conversionListener17 = map[string]any{}
+		}
+		access37, _ := conversionListener17["access"].(map[string]any)
+		if access37 == nil {
+			access37 = map[string]any{}
+		}
+		oauthAccessToken16, _ := access37["oauth_access_token"].(map[string]any)
+		if oauthAccessToken16 == nil {
+			oauthAccessToken16 = map[string]any{}
+		}
+		defaultResourceAcls7, _ := oauthAccessToken16["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls7 == nil {
+			defaultResourceAcls7 = map[string]any{}
+		}
+		resolvedConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls7["allow"] = resolvedConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow
+		oauthAccessToken16["default_resource_acls"] = defaultResourceAcls7
+		access37["oauth_access_token"] = oauthAccessToken16
+		conversionListener17["access"] = access37
+		payload["conversion-listener"] = conversionListener17
+	}
+	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+		conversionListener18, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener18 == nil {
+			conversionListener18 = map[string]any{}
+		}
+		access38, _ := conversionListener18["access"].(map[string]any)
+		if access38 == nil {
+			access38 = map[string]any{}
+		}
+		oauthAccessToken17, _ := access38["oauth_access_token"].(map[string]any)
+		if oauthAccessToken17 == nil {
+			oauthAccessToken17 = map[string]any{}
+		}
+		defaultResourceAcls8, _ := oauthAccessToken17["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls8 == nil {
+			defaultResourceAcls8 = map[string]any{}
+		}
+		resolvedConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls8["deny"] = resolvedConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny
+		oauthAccessToken17["default_resource_acls"] = defaultResourceAcls8
+		access38["oauth_access_token"] = oauthAccessToken17
+		conversionListener18["access"] = access38
+		payload["conversion-listener"] = conversionListener18
+	}
+	// spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+		passthroughListener11, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener11 == nil {
+			passthroughListener11 = map[string]any{}
+		}
+		access39, _ := passthroughListener11["access"].(map[string]any)
+		if access39 == nil {
+			access39 = map[string]any{}
+		}
+		consumer18, _ := access39["consumer"].(map[string]any)
+		if consumer18 == nil {
+			consumer18 = map[string]any{}
+		}
+		defaultPromptAcls9, _ := consumer18["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls9 == nil {
+			defaultPromptAcls9 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessConsumerDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls9["allow"] = resolvedPassthroughListenerAccessConsumerDefaultPromptAclsAllow
+		consumer18["default_prompt_acls"] = defaultPromptAcls9
+		access39["consumer"] = consumer18
+		passthroughListener11["access"] = access39
+		payload["passthrough-listener"] = passthroughListener11
+	}
+	// spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+		passthroughListener12, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener12 == nil {
+			passthroughListener12 = map[string]any{}
+		}
+		access40, _ := passthroughListener12["access"].(map[string]any)
+		if access40 == nil {
+			access40 = map[string]any{}
+		}
+		consumer19, _ := access40["consumer"].(map[string]any)
+		if consumer19 == nil {
+			consumer19 = map[string]any{}
+		}
+		defaultPromptAcls10, _ := consumer19["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls10 == nil {
+			defaultPromptAcls10 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessConsumerDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls10["deny"] = resolvedPassthroughListenerAccessConsumerDefaultPromptAclsDeny
+		consumer19["default_prompt_acls"] = defaultPromptAcls10
+		access40["consumer"] = consumer19
+		passthroughListener12["access"] = access40
+		payload["passthrough-listener"] = passthroughListener12
+	}
+	// spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+		passthroughListener13, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener13 == nil {
+			passthroughListener13 = map[string]any{}
+		}
+		access41, _ := passthroughListener13["access"].(map[string]any)
+		if access41 == nil {
+			access41 = map[string]any{}
+		}
+		consumer20, _ := access41["consumer"].(map[string]any)
+		if consumer20 == nil {
+			consumer20 = map[string]any{}
+		}
+		defaultResourceAcls9, _ := consumer20["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls9 == nil {
+			defaultResourceAcls9 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessConsumerDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls9["allow"] = resolvedPassthroughListenerAccessConsumerDefaultResourceAclsAllow
+		consumer20["default_resource_acls"] = defaultResourceAcls9
+		access41["consumer"] = consumer20
+		passthroughListener13["access"] = access41
+		payload["passthrough-listener"] = passthroughListener13
+	}
+	// spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+		passthroughListener14, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener14 == nil {
+			passthroughListener14 = map[string]any{}
+		}
+		access42, _ := passthroughListener14["access"].(map[string]any)
+		if access42 == nil {
+			access42 = map[string]any{}
+		}
+		consumer21, _ := access42["consumer"].(map[string]any)
+		if consumer21 == nil {
+			consumer21 = map[string]any{}
+		}
+		defaultResourceAcls10, _ := consumer21["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls10 == nil {
+			defaultResourceAcls10 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessConsumerDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls10["deny"] = resolvedPassthroughListenerAccessConsumerDefaultResourceAclsDeny
+		consumer21["default_resource_acls"] = defaultResourceAcls10
+		access42["consumer"] = consumer21
+		passthroughListener14["access"] = access42
+		payload["passthrough-listener"] = passthroughListener14
+	}
+	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+		passthroughListener15, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener15 == nil {
+			passthroughListener15 = map[string]any{}
+		}
+		access43, _ := passthroughListener15["access"].(map[string]any)
+		if access43 == nil {
+			access43 = map[string]any{}
+		}
+		oauthAccessToken18, _ := access43["oauth_access_token"].(map[string]any)
+		if oauthAccessToken18 == nil {
+			oauthAccessToken18 = map[string]any{}
+		}
+		defaultPromptAcls11, _ := oauthAccessToken18["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls11 == nil {
+			defaultPromptAcls11 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.allow references: %w", err)
+		}
+		defaultPromptAcls11["allow"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow
+		oauthAccessToken18["default_prompt_acls"] = defaultPromptAcls11
+		access43["oauth_access_token"] = oauthAccessToken18
+		passthroughListener15["access"] = access43
+		payload["passthrough-listener"] = passthroughListener15
+	}
+	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+		passthroughListener16, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener16 == nil {
+			passthroughListener16 = map[string]any{}
+		}
+		access44, _ := passthroughListener16["access"].(map[string]any)
+		if access44 == nil {
+			access44 = map[string]any{}
+		}
+		oauthAccessToken19, _ := access44["oauth_access_token"].(map[string]any)
+		if oauthAccessToken19 == nil {
+			oauthAccessToken19 = map[string]any{}
+		}
+		defaultPromptAcls12, _ := oauthAccessToken19["default_prompt_acls"].(map[string]any)
+		if defaultPromptAcls12 == nil {
+			defaultPromptAcls12 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.deny references: %w", err)
+		}
+		defaultPromptAcls12["deny"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny
+		oauthAccessToken19["default_prompt_acls"] = defaultPromptAcls12
+		access44["oauth_access_token"] = oauthAccessToken19
+		passthroughListener16["access"] = access44
+		payload["passthrough-listener"] = passthroughListener16
+	}
+	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+		passthroughListener17, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener17 == nil {
+			passthroughListener17 = map[string]any{}
+		}
+		access45, _ := passthroughListener17["access"].(map[string]any)
+		if access45 == nil {
+			access45 = map[string]any{}
+		}
+		oauthAccessToken20, _ := access45["oauth_access_token"].(map[string]any)
+		if oauthAccessToken20 == nil {
+			oauthAccessToken20 = map[string]any{}
+		}
+		defaultResourceAcls11, _ := oauthAccessToken20["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls11 == nil {
+			defaultResourceAcls11 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.allow references: %w", err)
+		}
+		defaultResourceAcls11["allow"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow
+		oauthAccessToken20["default_resource_acls"] = defaultResourceAcls11
+		access45["oauth_access_token"] = oauthAccessToken20
+		passthroughListener17["access"] = access45
+		payload["passthrough-listener"] = passthroughListener17
+	}
+	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+		passthroughListener18, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener18 == nil {
+			passthroughListener18 = map[string]any{}
+		}
+		access46, _ := passthroughListener18["access"].(map[string]any)
+		if access46 == nil {
+			access46 = map[string]any{}
+		}
+		oauthAccessToken21, _ := access46["oauth_access_token"].(map[string]any)
+		if oauthAccessToken21 == nil {
+			oauthAccessToken21 = map[string]any{}
+		}
+		defaultResourceAcls12, _ := oauthAccessToken21["default_resource_acls"].(map[string]any)
+		if defaultResourceAcls12 == nil {
+			defaultResourceAcls12 = map[string]any{}
+		}
+		resolvedPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.deny references: %w", err)
+		}
+		defaultResourceAcls12["deny"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny
+		oauthAccessToken21["default_resource_acls"] = defaultResourceAcls12
+		access46["oauth_access_token"] = oauthAccessToken21
+		passthroughListener18["access"] = access46
+		payload["passthrough-listener"] = passthroughListener18
+	}
+	// spec.apiSpec.passthrough-listener.prompts.access.acls.allow carries a CR reference: inject the resolved Konnect values into
+	// each element of the "prompts" array in the SDK payload, preserving
+	// sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
+		passthroughListener19, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener19 == nil {
+			passthroughListener19 = map[string]any{}
+		}
+		resolvedPassthroughListenerPromptsAccessAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerPromptsAccessAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.prompts.access.acls.allow references: %w", err)
+		}
+		if arr, ok := passthroughListener19["prompts"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access47, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls5, ok := access47["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls5["allow"]; !has {
+					continue
+				}
+				if ri < len(resolvedPassthroughListenerPromptsAccessAclsAllow) {
+					acls5["allow"] = resolvedPassthroughListenerPromptsAccessAclsAllow[ri]
+					ri++
+				}
+			}
+		}
+		resolvedPassthroughListenerPromptsAccessAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerPromptsAccessAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.prompts.access.acls.deny references: %w", err)
+		}
+		if arr, ok := passthroughListener19["prompts"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access47, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls5, ok := access47["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls5["deny"]; !has {
+					continue
+				}
+				if ri < len(resolvedPassthroughListenerPromptsAccessAclsDeny) {
+					acls5["deny"] = resolvedPassthroughListenerPromptsAccessAclsDeny[ri]
+					ri++
+				}
+			}
+		}
+		payload["passthrough-listener"] = passthroughListener19
+	}
+	// spec.apiSpec.passthrough-listener.resources.access.acls.allow carries a CR reference: inject the resolved Konnect values into
+	// each element of the "resources" array in the SDK payload, preserving
+	// sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
+		passthroughListener20, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener20 == nil {
+			passthroughListener20 = map[string]any{}
+		}
+		resolvedPassthroughListenerResourcesAccessAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerResourcesAccessAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.resources.access.acls.allow references: %w", err)
+		}
+		if arr, ok := passthroughListener20["resources"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access48, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls6, ok := access48["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls6["allow"]; !has {
+					continue
+				}
+				if ri < len(resolvedPassthroughListenerResourcesAccessAclsAllow) {
+					acls6["allow"] = resolvedPassthroughListenerResourcesAccessAclsAllow[ri]
+					ri++
+				}
+			}
+		}
+		resolvedPassthroughListenerResourcesAccessAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerResourcesAccessAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.resources.access.acls.deny references: %w", err)
+		}
+		if arr, ok := passthroughListener20["resources"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access48, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls6, ok := access48["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls6["deny"]; !has {
+					continue
+				}
+				if ri < len(resolvedPassthroughListenerResourcesAccessAclsDeny) {
+					acls6["deny"] = resolvedPassthroughListenerResourcesAccessAclsDeny[ri]
+					ri++
+				}
+			}
+		}
+		payload["passthrough-listener"] = passthroughListener20
+	}
+	// spec.apiSpec.upstream-server.prompts.access.acls.allow carries a CR reference: inject the resolved Konnect values into
+	// each element of the "prompts" array in the SDK payload, preserving
+	// sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
+		upstreamServer5, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer5 == nil {
+			upstreamServer5 = map[string]any{}
+		}
+		resolvedUpstreamServerPromptsAccessAclsAllow, err := resolveAIGatewayMCPServerUpstreamServerPromptsAccessAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.prompts.access.acls.allow references: %w", err)
+		}
+		if arr, ok := upstreamServer5["prompts"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access49, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls7, ok := access49["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls7["allow"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerPromptsAccessAclsAllow) {
+					acls7["allow"] = resolvedUpstreamServerPromptsAccessAclsAllow[ri]
+					ri++
+				}
+			}
+		}
+		resolvedUpstreamServerPromptsAccessAclsDeny, err := resolveAIGatewayMCPServerUpstreamServerPromptsAccessAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.prompts.access.acls.deny references: %w", err)
+		}
+		if arr, ok := upstreamServer5["prompts"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access49, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls7, ok := access49["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls7["deny"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerPromptsAccessAclsDeny) {
+					acls7["deny"] = resolvedUpstreamServerPromptsAccessAclsDeny[ri]
+					ri++
+				}
+			}
+		}
+		payload["upstream-server"] = upstreamServer5
+	}
+	// spec.apiSpec.upstream-server.resources.access.acls.allow carries a CR reference: inject the resolved Konnect values into
+	// each element of the "resources" array in the SDK payload, preserving
+	// sibling keys of its ancestors.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
+		upstreamServer6, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer6 == nil {
+			upstreamServer6 = map[string]any{}
+		}
+		resolvedUpstreamServerResourcesAccessAclsAllow, err := resolveAIGatewayMCPServerUpstreamServerResourcesAccessAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.resources.access.acls.allow references: %w", err)
+		}
+		if arr, ok := upstreamServer6["resources"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access50, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls8, ok := access50["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls8["allow"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerResourcesAccessAclsAllow) {
+					acls8["allow"] = resolvedUpstreamServerResourcesAccessAclsAllow[ri]
+					ri++
+				}
+			}
+		}
+		resolvedUpstreamServerResourcesAccessAclsDeny, err := resolveAIGatewayMCPServerUpstreamServerResourcesAccessAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.resources.access.acls.deny references: %w", err)
+		}
+		if arr, ok := upstreamServer6["resources"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access50, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls8, ok := access50["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls8["deny"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerResourcesAccessAclsDeny) {
+					acls8["deny"] = resolvedUpstreamServerResourcesAccessAclsDeny[ri]
+					ri++
+				}
+			}
+		}
+		payload["upstream-server"] = upstreamServer6
+	}
 	// spec.apiSpec.conversion-listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
 	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
-		conversionListener11, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener11 == nil {
-			conversionListener11 = map[string]any{}
+		conversionListener19, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener19 == nil {
+			conversionListener19 = map[string]any{}
 		}
 		resolvedConversionListenerDatastores, err := resolveAIGatewayMCPServerConversionListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -9702,8 +14558,8 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedConversionListenerDatastores {
 			wrappedConversionListenerDatastores = append(wrappedConversionListenerDatastores, map[string]string{"name": v})
 		}
-		conversionListener11["datastores"] = wrappedConversionListenerDatastores
-		payload["conversion-listener"] = conversionListener11
+		conversionListener19["datastores"] = wrappedConversionListenerDatastores
+		payload["conversion-listener"] = conversionListener19
 	}
 	// spec.apiSpec.conversion-only.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
@@ -9728,9 +14584,9 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// object per resolved Konnect value, each keeping the OAS item shape and
 	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
-		listener9, _ := payload["listener"].(map[string]any)
-		if listener9 == nil {
-			listener9 = map[string]any{}
+		listener17, _ := payload["listener"].(map[string]any)
+		if listener17 == nil {
+			listener17 = map[string]any{}
 		}
 		resolvedListenerDatastores, err := resolveAIGatewayMCPServerListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -9740,16 +14596,16 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedListenerDatastores {
 			wrappedListenerDatastores = append(wrappedListenerDatastores, map[string]string{"name": v})
 		}
-		listener9["datastores"] = wrappedListenerDatastores
-		payload["listener"] = listener9
+		listener17["datastores"] = wrappedListenerDatastores
+		payload["listener"] = listener17
 	}
 	// spec.apiSpec.passthrough-listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
 	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
-		passthroughListener11, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener11 == nil {
-			passthroughListener11 = map[string]any{}
+		passthroughListener21, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener21 == nil {
+			passthroughListener21 = map[string]any{}
 		}
 		resolvedPassthroughListenerDatastores, err := resolveAIGatewayMCPServerPassthroughListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -9759,16 +14615,16 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedPassthroughListenerDatastores {
 			wrappedPassthroughListenerDatastores = append(wrappedPassthroughListenerDatastores, map[string]string{"name": v})
 		}
-		passthroughListener11["datastores"] = wrappedPassthroughListenerDatastores
-		payload["passthrough-listener"] = passthroughListener11
+		passthroughListener21["datastores"] = wrappedPassthroughListenerDatastores
+		payload["passthrough-listener"] = passthroughListener21
 	}
 	// spec.apiSpec.upstream-server.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
 	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
-		upstreamServer5, _ := payload["upstream-server"].(map[string]any)
-		if upstreamServer5 == nil {
-			upstreamServer5 = map[string]any{}
+		upstreamServer7, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer7 == nil {
+			upstreamServer7 = map[string]any{}
 		}
 		resolvedUpstreamServerDatastores, err := resolveAIGatewayMCPServerUpstreamServerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -9778,8 +14634,8 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedUpstreamServerDatastores {
 			wrappedUpstreamServerDatastores = append(wrappedUpstreamServerDatastores, map[string]string{"name": v})
 		}
-		upstreamServer5["datastores"] = wrappedUpstreamServerDatastores
-		payload["upstream-server"] = upstreamServer5
+		upstreamServer7["datastores"] = wrappedUpstreamServerDatastores
+		payload["upstream-server"] = upstreamServer7
 	}
 	return spec.toUpdateAIGatewayMCPServerRequestFromPayload(payload)
 }

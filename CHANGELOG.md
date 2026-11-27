@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [v2.4.0](#v240)
 - [v2.4.0-rapid.3.1](#v240-rapid31)
 - [v2.4.0-rapid.3.0](#v240-rapid30)
@@ -195,6 +196,16 @@
   `AIGatewayMCPServer` and `AIGatewayModel` is now sent to Konnect and on-prem
   AI Gateways. Before, the operator dropped it, and the 8 MiB default applied.
   [#6788](https://github.com/Kong/kong-operator/pull/6788)
+
+## [Unreleased]
+
+### Fixes
+
+- `AIGatewayMCPServer` prompt and resource ACLs (`defaultPromptAcls`,
+  `defaultResourceAcls`, and each prompt's or resource's `access.acls`) are now
+  resolved to the referenced consumer groups' names before being sent to
+  Konnect. A server that used them previously failed to reconcile.
+  ([#6779](https://github.com/Kong/kong-operator/issues/6779))
 
 ## [v2.4.0]
 
@@ -5195,6 +5206,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[unreleased]: https://github.com/Kong/kong-operator/compare/v2.4.0..HEAD
 [v2.4.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.3.1..v2.4.0
 [v2.4.0-rapid.3.1]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.3.0..v2.4.0-rapid.3.1
 [v2.4.0-rapid.3.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.2.0..v2.4.0-rapid.3.0

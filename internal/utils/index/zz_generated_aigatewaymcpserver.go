@@ -717,6 +717,342 @@ func aiGatewayMCPServerOnAIGatewayConsumerGroupRef(object client.Object) []strin
 			out = append(out, ns+"/"+ref.Name)
 		}
 	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, refs := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerPromptsAccessAclsAllow(ent) {
+		for _, ref := range refs {
+			if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+				continue
+			}
+			ns := ref.Namespace
+			if ns == "" {
+				ns = ent.GetNamespace()
+			}
+			out = append(out, ns+"/"+ref.Name)
+		}
+	}
+	for _, refs := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerPromptsAccessAclsDeny(ent) {
+		for _, ref := range refs {
+			if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+				continue
+			}
+			ns := ref.Namespace
+			if ns == "" {
+				ns = ent.GetNamespace()
+			}
+			out = append(out, ns+"/"+ref.Name)
+		}
+	}
+	for _, refs := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerResourcesAccessAclsAllow(ent) {
+		for _, ref := range refs {
+			if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+				continue
+			}
+			ns := ref.Namespace
+			if ns == "" {
+				ns = ent.GetNamespace()
+			}
+			out = append(out, ns+"/"+ref.Name)
+		}
+	}
+	for _, refs := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerResourcesAccessAclsDeny(ent) {
+		for _, ref := range refs {
+			if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+				continue
+			}
+			ns := ref.Namespace
+			if ns == "" {
+				ns = ent.GetNamespace()
+			}
+			out = append(out, ns+"/"+ref.Name)
+		}
+	}
+	for _, refs := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerPromptsAccessAclsAllow(ent) {
+		for _, ref := range refs {
+			if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+				continue
+			}
+			ns := ref.Namespace
+			if ns == "" {
+				ns = ent.GetNamespace()
+			}
+			out = append(out, ns+"/"+ref.Name)
+		}
+	}
+	for _, refs := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerPromptsAccessAclsDeny(ent) {
+		for _, ref := range refs {
+			if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+				continue
+			}
+			ns := ref.Namespace
+			if ns == "" {
+				ns = ent.GetNamespace()
+			}
+			out = append(out, ns+"/"+ref.Name)
+		}
+	}
+	for _, refs := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerResourcesAccessAclsAllow(ent) {
+		for _, ref := range refs {
+			if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+				continue
+			}
+			ns := ref.Namespace
+			if ns == "" {
+				ns = ent.GetNamespace()
+			}
+			out = append(out, ns+"/"+ref.Name)
+		}
+	}
+	for _, refs := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerResourcesAccessAclsDeny(ent) {
+		for _, ref := range refs {
+			if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+				continue
+			}
+			ns := ref.Namespace
+			if ns == "" {
+				ns = ent.GetNamespace()
+			}
+			out = append(out, ns+"/"+ref.Name)
+		}
+	}
 	return out
 }
 
