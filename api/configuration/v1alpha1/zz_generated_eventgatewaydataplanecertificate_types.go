@@ -80,13 +80,11 @@ type EventGatewayDataPlaneCertificateAPISpec struct {
 	// A description of the certificate.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
 	Description string `json:"description,omitzero"`
 
 	// The name to identify of the certificate.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }

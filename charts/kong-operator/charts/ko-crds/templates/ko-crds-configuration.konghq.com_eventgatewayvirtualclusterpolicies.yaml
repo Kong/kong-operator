@@ -98,7 +98,6 @@ spec:
                                       items:
                                         properties:
                                           match:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:

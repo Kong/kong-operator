@@ -107,7 +107,6 @@ spec:
                                 directory:
                                   description: Kong Identity directory to use for
                                     principal lookup.
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -137,7 +136,6 @@ spec:
                                         `sasl_scram`.
                                         In case of `client_certificate` it's a principal mapped by the listener
                                         TLSServer policy.
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -159,12 +157,10 @@ spec:
                               properties:
                                 scope:
                                   description: Maps the scope claim.
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 sub:
                                   description: Maps the subject claim.
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                               type: object
@@ -179,7 +175,6 @@ spec:
                                 directory:
                                   description: Kong Identity directory to use for
                                     principal lookup.
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -206,18 +201,15 @@ spec:
                                 cacheExpiration:
                                   description: Duration after which the gateway will
                                     fetch and cache JWKS.
-                                  maxLength: 253
                                   type: string
                                 endpoint:
                                   description: URL for JWKS endpoint.
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 timeout:
                                   description: |-
                                     Total time from establishing connection to receive a response from JWKS
                                     endpoint.
-                                  maxLength: 253
                                   type: string
                               required:
                               - endpoint
@@ -255,7 +247,6 @@ spec:
                                       is a type alias.
                                     properties:
                                       name:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -265,7 +256,6 @@ spec:
                                   type: array
                                 issuer:
                                   description: Expected token issuer in the token.
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                               type: object
@@ -287,7 +277,6 @@ spec:
                                 directory:
                                   description: Kong Identity directory to use for
                                     principal lookup.
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -317,7 +306,6 @@ spec:
                                         `sasl_scram`.
                                         In case of `client_certificate` it's a principal mapped by the listener
                                         TLSServer policy.
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -353,7 +341,6 @@ spec:
                                       from API responses.
                                       If provided as an expression, the expression itself is stored and returned
                                       by the API.
-                                    maxLength: 253
                                     minLength: 1
                                     type: string
                                   username:
@@ -362,7 +349,6 @@ spec:
                                       expression.
                                       The value is stored and returned by the API as-is, not treated as sensitive
                                       information.
-                                    maxLength: 253
                                     minLength: 1
                                     type: string
                                 required:
@@ -397,7 +383,6 @@ spec:
                                 directory:
                                   description: Kong Identity directory to use for
                                     principal lookup.
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -427,7 +412,6 @@ spec:
                                         `sasl_scram`.
                                         In case of `client_certificate` it's a principal mapped by the listener
                                         TLSServer policy.
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -536,7 +520,6 @@ spec:
                                           is a type alias.
                                         properties:
                                           value:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -551,7 +534,6 @@ spec:
                                     glob:
                                       description: Expose any id that matches this
                                         glob pattern (e.g., `my_id_*`).
-                                      maxLength: 253
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
@@ -611,7 +593,6 @@ spec:
                                           a type alias.
                                         properties:
                                           backend:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -640,7 +621,6 @@ spec:
                                       description: |-
                                         Expose any backend topic that matches this glob pattern (e.g.,
                                         `operations_data_*`).
-                                      maxLength: 253
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
@@ -720,14 +700,12 @@ spec:
                       properties:
                         alias:
                           description: The client-visible topic name.
-                          maxLength: 253
                           minLength: 1
                           type: string
                         condition:
                           description: |-
                             CEL expression evaluated against the connection's auth context.
                             If omitted or empty, the alias is active for all connections.
-                          maxLength: 253
                           type: string
                         conflict:
                           description: |-
@@ -743,7 +721,6 @@ spec:
                         topic:
                           description: The namespace-visible topic name this alias
                             resolves to.
-                          maxLength: 253
                           minLength: 1
                           type: string
                       required:

@@ -214,7 +214,6 @@ spec:
                                       items:
                                         properties:
                                           match:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -309,7 +308,6 @@ spec:
                                       items:
                                         properties:
                                           match:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -541,7 +539,6 @@ spec:
                                 remove:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -550,11 +547,9 @@ spec:
                                 set:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                     value:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -681,7 +676,6 @@ spec:
                                   avro:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -690,7 +684,6 @@ spec:
                                   json:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -735,7 +728,6 @@ spec:
                                   avro:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -744,7 +736,6 @@ spec:
                                   json:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -877,7 +868,6 @@ spec:
                                   inline:
                                     properties:
                                       inline:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -894,7 +884,6 @@ spec:
                                           recordHeader:
                                             properties:
                                               name:
-                                                maxLength: 253
                                                 minLength: 1
                                                 type: string
                                             type: object
@@ -936,11 +925,9 @@ spec:
                                         - name
                                         type: object
                                       subject:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                       version:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:

@@ -77,7 +77,6 @@ spec:
                         - secretRef
                         type: string
                       value:
-                        maxLength: 4096
                         type: string
                     required:
                     - type
@@ -91,10 +90,8 @@ spec:
                     - message: only one of value and secretRef can be set
                       rule: '!(has(self.value) && has(self.secretRef))'
                   description:
-                    maxLength: 253
                     type: string
                   name:
-                    maxLength: 253
                     pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                 required:
