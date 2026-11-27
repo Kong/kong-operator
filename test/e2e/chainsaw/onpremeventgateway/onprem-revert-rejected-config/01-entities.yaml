@@ -1,0 +1,58 @@
+# The entities of the gateway. No data plane or Kafka cluster is needed: the
+# test looks at what gw-admin accepts, not at traffic.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: ($backend_cluster_name)
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: ($backend_cluster_name)
+    bootstrapServers:
+      - kafka.example.svc:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: vcluster
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($backend_cluster_name)
+  apiSpec:
+    name: vcluster
+    dnsLabel: vcluster
+    aclMode: enforce_on_gateway
+    authentication:
+      - type: anonymous
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicy
+metadata:
+  name: acls
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: acls
+    acls:
+      name: acls
+      condition: "{{ context.topic.name == 'orders' }}"
+      config:
+        rules:
+          - action: allow
+            resourceType: topic
+            operations: [{name: all}]
+            resourceNames: {type: stat, stat: [{match: "*"}]}

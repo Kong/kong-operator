@@ -424,6 +424,7 @@ type BackendClusterTLS struct {
 	// List of supported TLS versions.
 	//
 	// +optional
+	// +kubebuilder:validation:items:Enum=tls12;tls13
 	TLSVersions []string `json:"tlsVersions,omitempty"`
 }
 
@@ -477,6 +478,8 @@ type BackendMetadataUpdateIntervalSeconds int
 // with a Modify Headers consume policy.
 //
 // **Requires a minimum runtime version of `1.2`**.
+//
+// +kubebuilder:validation:Enum=error;skip;passthrough;mark
 type ConsumeFailureMode string
 
 // ConsumeKeyValidationAction Deprecated. Use `failure_mode`.
@@ -485,6 +488,8 @@ type ConsumeFailureMode string
 // * mark - marks a record with kong/server header and client ID value
 // to help to identify the clients violating schema.
 // * skip - skips delivering a record.
+//
+// +kubebuilder:validation:Enum=mark;skip
 type ConsumeKeyValidationAction string
 
 // ConsumeValueValidationAction Deprecated. Use `failure_mode`.
@@ -493,10 +498,14 @@ type ConsumeKeyValidationAction string
 // * mark - marks a record with kong/server header and client ID value
 // to help to identify the clients violating schema.
 // * skip - skips delivering a record.
+//
+// +kubebuilder:validation:Enum=mark;skip
 type ConsumeValueValidationAction string
 
 // DecryptionRecordPart * key - decrypt the record key
 // * value - decrypt the record value
+//
+// +kubebuilder:validation:Enum=key;value
 type DecryptionRecordPart string
 
 // EncryptionFailureMode Describes how to handle failing encryption or
@@ -505,6 +514,8 @@ type DecryptionRecordPart string
 // fails.
 // Use `passthrough` to ignore encryption or decryption failure and continue
 // proxying the record.
+//
+// +kubebuilder:validation:Enum=error;passthrough
 type EncryptionFailureMode string
 
 // EncryptionKey represents a union type for EncryptionKey.
@@ -632,6 +643,8 @@ type EncryptionKeyStatic struct {
 
 // EncryptionRecordPart * key - encrypt the record key
 // * value - encrypt the record value
+//
+// +kubebuilder:validation:Enum=key;value
 type EncryptionRecordPart string
 
 // EventGatewayACLOperation An Event Gateway operation to match against in an
@@ -651,6 +664,7 @@ type EventGatewayACLPolicyConfig struct {
 	// Every ACL rule in this list applies independently.
 	//
 	// +required
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayACLRule `json:"rules,omitempty"`
 }
 
@@ -825,6 +839,8 @@ type EventGatewayACLRuleResourceNamesDynamicArray string
 
 // EventGatewayACLRuleResourceNamesStaticArray A static list of resource name
 // globs to match against resources when applying an ACL policy.
+//
+// +kubebuilder:validation:MaxItems=50
 type EventGatewayACLRuleResourceNamesStaticArray []EventGatewayACLResourceName
 
 // EventGatewayACLsPolicy Apply Kafka ACLs to virtual cluster traffic.
@@ -886,6 +902,7 @@ type EventGatewayAlterClientQuotasRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayAlterClientQuotasRule `json:"rules,omitempty"`
 }
 
@@ -937,6 +954,7 @@ type EventGatewayAlterConfigsRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayAlterConfigsRule `json:"rules,omitempty"`
 }
 
@@ -988,6 +1006,7 @@ type EventGatewayAlterUserScramCredentialsRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayAlterUserScramCredentialsRule `json:"rules,omitempty"`
 }
 
@@ -1669,6 +1688,7 @@ type EventGatewayConsumerGroupHeartbeatRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayConsumerGroupHeartbeatRule `json:"rules,omitempty"`
 }
 
@@ -1720,6 +1740,7 @@ type EventGatewayCreatePartitionsRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayCreatePartitionsRule `json:"rules,omitempty"`
 }
 
@@ -1776,6 +1797,7 @@ type EventGatewayCreateTopicsRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayCreateTopicsRule `json:"rules,omitempty"`
 }
 
@@ -1872,10 +1894,12 @@ type EventGatewayDecryptPolicyConfig struct {
 	// Describes how to find a symmetric key for decryption.
 	//
 	// +required
+	// +kubebuilder:validation:MinItems=1
 	KeySources []EventGatewayKeySource `json:"keySources,omitempty"`
 	// Describes the parts of a record to decrypt.
 	//
 	// +required
+	// +kubebuilder:validation:MinItems=1
 	PartOfRecord []DecryptionRecordPart `json:"partOfRecord,omitempty"`
 }
 
@@ -1901,6 +1925,7 @@ type EventGatewayEncryptConfig struct {
 	// Describes the parts of a record to encrypt.
 	//
 	// +required
+	// +kubebuilder:validation:MinItems=1
 	PartOfRecord []EncryptionRecordPart `json:"partOfRecord,omitempty"`
 }
 
@@ -2074,6 +2099,7 @@ type EventGatewayFetchRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayFetchRule `json:"rules,omitempty"`
 }
 
@@ -2125,6 +2151,7 @@ type EventGatewayIncrementalAlterConfigsRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayIncrementalAlterConfigsRule `json:"rules,omitempty"`
 }
 
@@ -2175,6 +2202,7 @@ type EventGatewayJoinGroupRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayJoinGroupRule `json:"rules,omitempty"`
 }
 
@@ -3154,6 +3182,7 @@ type EventGatewayModifyHeadersPolicyCreateConfig struct {
 	// Actions are run in sequential order and act on individual headers.
 	//
 	// +optional
+	// +kubebuilder:validation:MinItems=1
 	Actions []EventGatewayModifyHeaderAction `json:"actions,omitempty"`
 }
 
@@ -3167,6 +3196,7 @@ type EventGatewayOffsetCommitRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayOffsetCommitRule `json:"rules,omitempty"`
 }
 
@@ -3217,6 +3247,7 @@ type EventGatewayOffsetFetchRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayOffsetFetchRule `json:"rules,omitempty"`
 }
 
@@ -3294,6 +3325,7 @@ type EventGatewayParsedRecordDecryptFieldsConfig struct {
 	// Describes how to find a symmetric key for decryption.
 	//
 	// +required
+	// +kubebuilder:validation:MinItems=1
 	KeySources []EventGatewayKeySource `json:"keySources,omitempty"`
 }
 
@@ -3489,6 +3521,7 @@ type EventGatewayParsedRecordEncryptFieldsConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=256
+	// +kubebuilder:validation:MinItems=1
 	EncryptFields []EventGatewayParsedRecordEncryptionSelector `json:"encryptFields,omitempty"`
 	// Describes how to handle a failure in a policy applied to produced records.
 	// * `reject` - rejects the record batch.
@@ -3826,6 +3859,10 @@ type EventGatewayParsedRecordFieldPathsArrayItem struct {
 }
 
 // EventGatewayParsedRecordFieldPathsArray is a type alias.
+//
+// +kubebuilder:validation:MinItems=1
+//
+// +kubebuilder:validation:MaxItems=50
 type EventGatewayParsedRecordFieldPathsArray []EventGatewayParsedRecordFieldPathsArrayItem
 
 // EventGatewayParsedRecordFieldPathsExpression This expression should evaluate
@@ -3867,6 +3904,7 @@ type EventGatewayParsedRecordMaskFieldsConsumeConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=256
+	// +kubebuilder:validation:MinItems=1
 	MaskFields []EventGatewayParsedRecordMaskSelector `json:"maskFields,omitempty"`
 }
 
@@ -3956,6 +3994,7 @@ type EventGatewayParsedRecordMaskFieldsProduceConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=256
+	// +kubebuilder:validation:MinItems=1
 	MaskFields []EventGatewayParsedRecordMaskSelector `json:"maskFields,omitempty"`
 }
 
@@ -5722,6 +5761,7 @@ type EventGatewayProduceRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayProduceRule `json:"rules,omitempty"`
 }
 
@@ -6380,6 +6420,8 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 // `reject` fails the request with the `POLICY_VIOLATION` error code.
 // `passthrough` lets the request continue, but logs the violation in the same
 // way as `reject`.
+//
+// +kubebuilder:validation:Enum=reject;passthrough
 type EventGatewayRequestRuleAction string
 
 // EventGatewayRequestRuleValidatorConfig The configuration of the request rule
@@ -6394,6 +6436,7 @@ type EventGatewayRequestRuleValidatorConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=100
+	// +kubebuilder:validation:MinItems=1
 	Requests []EventGatewayRequestRules `json:"requests,omitempty"`
 }
 
@@ -6897,6 +6940,7 @@ type EventGatewayTLSListenerPolicyConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:MinItems=1
 	Certificates []TLSCertificate `json:"certificates,omitempty"`
 	// Configures mutual TLS (mTLS) client certificate verification.
 	// When set, the gateway
@@ -6951,6 +6995,7 @@ type EventGatewayTLSListenerPolicyConfigClientAuthentication struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MinItems=1
 	TLSTrustBundles []EventGatewayTLSTrustBundleRef `json:"tlsTrustBundles,omitempty"`
 }
 
@@ -6964,6 +7009,7 @@ type EventGatewayTxnOffsetCommitRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxItems=10
+	// +kubebuilder:validation:MinItems=1
 	Rules []EventGatewayTxnOffsetCommitRule `json:"rules,omitempty"`
 }
 
@@ -7042,6 +7088,8 @@ type FetchKongIdentityPrincipal struct {
 // * `ignore` - proceed without principal metadata if the lookup fails.
 //
 // **Requires a minimum runtime version of `1.2`**.
+//
+// +kubebuilder:validation:Enum=error;ignore
 type FetchKongIdentityPrincipalFailureMode string
 
 // FetchKongIdentityPrincipalFetchBy Defines how to look up the principal in
@@ -7449,12 +7497,16 @@ type NamespaceExactAllowListItem struct {
 // Headers produce policy, or use a different failure mode.
 //
 // **Requires a minimum runtime version of `1.2`**.
+//
+// +kubebuilder:validation:Enum=reject;passthrough;mark
 type ProduceFailureMode string
 
 // ProduceKeyValidationAction Defines a behavior when record key is not valid.
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
 // to help to identify the clients violating schema.
+//
+// +kubebuilder:validation:Enum=reject;mark
 type ProduceKeyValidationAction string
 
 // ProduceValueValidationAction Defines a behavior when record value is not
@@ -7462,6 +7514,8 @@ type ProduceKeyValidationAction string
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
 // to help to identify the clients violating schema.
+//
+// +kubebuilder:validation:Enum=reject;mark
 type ProduceValueValidationAction string
 
 // SchemaRegistryAuthenticationBasic Basic authentication scheme for the schema
@@ -7912,6 +7966,8 @@ type TLSVersionRange struct {
 // * `drop` - the unknown fields are removed from the transcoded value.
 //
 // **Requires a minimum runtime version of `1.3`**.
+//
+// +kubebuilder:validation:Enum=fail;drop
 type TranscodeOnUnknownField string
 
 // VirtualClusterACLMode Configures whether or not ACL policies are enforced on
@@ -7921,6 +7977,8 @@ type TranscodeOnUnknownField string
 // and does not forward ACL-related commands to the backend cluster.
 // Note that if there are no ACL policies configured, all access is denied.
 // - `passthrough` tells the gateway to forward all ACL-related commands.
+//
+// +kubebuilder:validation:Enum=enforce_on_gateway;passthrough
 type VirtualClusterACLMode string
 
 // VirtualClusterAuthenticationAnonymous is a type alias.
@@ -8087,6 +8145,7 @@ type VirtualClusterAuthenticationSaslPlain struct {
 	// mediation.
 	//
 	// +optional
+	// +kubebuilder:validation:MinItems=1
 	Principals []VirtualClusterAuthenticationPrincipal `json:"principals,omitempty"`
 }
 
@@ -8287,6 +8346,7 @@ type VirtualClusterAuthenticationValidate struct {
 	// One of them has to match the audience claim in the token.
 	//
 	// +optional
+	// +kubebuilder:validation:MinItems=1
 	Audiences []VirtualClusterAuthenticationAudience `json:"audiences,omitempty"`
 	// Expected token issuer in the token.
 	//
@@ -8471,6 +8531,7 @@ type VirtualClusterNamespaceIDSelectorExactList struct {
 	//
 	//
 	// +optional
+	// +kubebuilder:validation:MinItems=1
 	ExactList []VirtualClusterNamespaceIDSelectorExactListExactList `json:"exactList,omitempty"`
 }
 
@@ -8613,6 +8674,7 @@ type VirtualClusterNamespaceTopicSelectorExactList struct {
 	// Explicit allow-list of backend topic names.
 	//
 	// +optional
+	// +kubebuilder:validation:MinItems=1
 	ExactList []NamespaceExactAllowListItem `json:"exactList,omitempty"`
 }
 
@@ -8684,4 +8746,6 @@ type VirtualClusterTopicAlias struct {
 // * warn - activate the alias but log a warning and set the conflict metric to
 // 1.
 // * ignore - activate the alias silently.
+//
+// +kubebuilder:validation:Enum=warn;ignore
 type VirtualClusterTopicAliasConflict string

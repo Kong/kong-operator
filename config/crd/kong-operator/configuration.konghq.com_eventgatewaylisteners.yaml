@@ -75,7 +75,9 @@ spec:
 
                       `localhost` means only the localhost ipv4 address.
                     items:
+                      minLength: 1
                       type: string
+                    minItems: 1
                     type: array
                   description:
                     description: A human-readable description of the listener.
@@ -114,7 +116,12 @@ spec:
                       - type: integer
                       - type: string
                       x-kubernetes-int-or-string: true
+                    maxItems: 64
+                    minItems: 1
                     type: array
+                    x-kubernetes-validations:
+                    - message: an integer port must be between 1 and 65535
+                      rule: self.all(p, type(p) != int || (p >= 1 && p <= 65535))
                 required:
                 - addresses
                 - name

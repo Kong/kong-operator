@@ -389,6 +389,7 @@ spec:
                               - key
                               type: object
                             maxItems: 1
+                            minItems: 1
                             type: array
                           clientAuthentication:
                             description: |-
@@ -454,6 +455,7 @@ spec:
                                   required:
                                   - name
                                   type: object
+                                minItems: 1
                                 type: array
                             required:
                             - mode

@@ -138,6 +138,15 @@
 
 ### Fixes
 
+- Event Gateway CRDs refuse the lists Konnect and gw-admin refuse: an empty
+  list where an item is required (e.g. `bootstrapServers: []` or ACL
+  `rules: []`), more items than allowed, and items outside the enum, pattern
+  or length of the API (e.g. a bootstrap server without a port or
+  `tlsVersions: [tls11]`). `EventGatewayListener` `ports` holds at most 64
+  entries, and an integer port must be between 1 and 65535. A stored object
+  holding a refused value can't change the list holding it until the value is
+  fixed.
+  [#6823](https://github.com/Kong/kong-operator/pull/6823)
 - The admission webhook no longer fails or wrongly rejects changes while
   another `Gateway` is starting, for example `KongPlugin` changes failing with
   `internal validation error`. It now validates against a Kong Gateway that

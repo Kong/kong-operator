@@ -629,9 +629,9 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer_StrictRoundTrip(t *testing.T) {
 							Cache: AIGatewayMCPServerConversionListenerConfigCache{
 								Discover: AIGatewayMCPServerCacheHint{CacheScope: "private", TtlMs: 1000},
 							},
-							Upstream: AIGatewayUpstreamConfig{
-								Auth: &AIGatewayUpstreamConfigAuth{
-									Type:                     AIGatewayUpstreamConfigAuthTypeAIGatewayUpstreamAuthAWS,
+							Upstream: AIGatewayMCPServerUpstreamConfig{
+								Auth: &AIGatewayMCPServerUpstreamConfigAuth{
+									Type:                     AIGatewayMCPServerUpstreamConfigAuthTypeAIGatewayUpstreamAuthAWS,
 									AIGatewayUpstreamAuthAWS: &AIGatewayUpstreamAuthAWS{Region: "us-east-1"},
 								},
 							},

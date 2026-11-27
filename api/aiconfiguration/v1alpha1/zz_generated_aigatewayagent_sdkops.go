@@ -65,6 +65,15 @@ var AIGatewayAgentSDKOpsBoolFields = []AIGatewayAgentSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "config.targets.[].failover",
+		Path: []string{
+			"config",
+			"targets",
+			"[]",
+			"failover",
+		},
+	},
+	{
 		Label: "enabled",
 		Path: []string{
 			"enabled",

@@ -67,6 +67,10 @@ func (obj *AIGatewayModelProvider) GetKonnectName() string {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek.Name)
 		}
+	case AIGatewayModelProviderConfigTypeFireworks:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks.Name)
+		}
 	case AIGatewayModelProviderConfigTypeGemini:
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.Name)
@@ -83,6 +87,10 @@ func (obj *AIGatewayModelProvider) GetKonnectName() string {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2 != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2.Name)
 		}
+	case AIGatewayModelProviderConfigTypeMeta:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta.Name)
+		}
 	case AIGatewayModelProviderConfigTypeMistral:
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.Name)
@@ -98,6 +106,10 @@ func (obj *AIGatewayModelProvider) GetKonnectName() string {
 	case AIGatewayModelProviderConfigTypeSagemaker:
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.Name)
+		}
+	case AIGatewayModelProviderConfigTypeTogetherai:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai.Name)
 		}
 	case AIGatewayModelProviderConfigTypeTypesafe:
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {

@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -17,6 +18,7 @@ const (
 	kbValidationEnumFmt          = "+kubebuilder:validation:Enum=%s"
 	kbValidationMaxPropertiesFmt = "+kubebuilder:validation:MaxProperties=%d"
 	kbValidationMaxItemsFmt      = "+kubebuilder:validation:MaxItems=%d"
+	kbValidationMinItemsFmt      = "+kubebuilder:validation:MinItems=%d"
 	kbValidationTypeObject       = "+kubebuilder:validation:Type=object"
 )
 
@@ -29,7 +31,13 @@ func markerValidationPattern(v string) string    { return fmt.Sprintf(kbValidati
 func markerValidationEnum(v string) string       { return fmt.Sprintf(kbValidationEnumFmt, v) }
 func markerValidationMaxProperties(v int) string { return fmt.Sprintf(kbValidationMaxPropertiesFmt, v) }
 func markerValidationMaxItems(v int) string      { return fmt.Sprintf(kbValidationMaxItemsFmt, v) }
-func markerValidationTypeObject() string         { return kbValidationTypeObject }
+func markerValidationMinItems(v int) string      { return fmt.Sprintf(kbValidationMinItemsFmt, v) }
+
+// itemsMarker turns a validation marker into its items: form.
+func itemsMarker(marker string) string {
+	return strings.Replace(marker, "+kubebuilder:validation:", "+kubebuilder:validation:items:", 1)
+}
+func markerValidationTypeObject() string { return kbValidationTypeObject }
 
 // markerValidationMinimum/Maximum format via [strconv.FormatFloat] (not fmt's %v/%g) because %g
 // switches to scientific notation for large magnitudes (e.g. 2147483646 -> 2.147483646e+09),

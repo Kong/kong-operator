@@ -190,6 +190,96 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 properties:
                                   allow:
@@ -352,6 +442,96 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 properties:
                                   allow:
@@ -434,6 +614,34 @@ spec:
                             items:
                               type: string
                             type: array
+                          balancer:
+                            properties:
+                              algorithm:
+                                enum:
+                                - consistent-hashing
+                                - least-connections
+                                - lowest-latency
+                                - round-robin
+                                minLength: 1
+                                type: string
+                              consistent-hashing:
+                                properties:
+                                  hashOnHeader:
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - hashOnHeader
+                                type: object
+                              least-connections:
+                                type: object
+                              lowest-latency:
+                                type: object
+                              round-robin:
+                                type: object
+                            required:
+                            - algorithm
+                            type: object
                           caCertificates:
                             items:
                               properties:
@@ -454,6 +662,30 @@ spec:
                           cache:
                             properties:
                               discover:
+                                properties:
+                                  cacheScope:
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              promptsList:
+                                properties:
+                                  cacheScope:
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              resourcesList:
                                 properties:
                                   cacheScope:
                                     enum:
@@ -513,6 +745,13 @@ spec:
                             maximum: 2147483646
                             minimum: 0
                             type: integer
+                          path:
+                            maxLength: 253
+                            pattern: ^/
+                            type: string
+                          protocol:
+                            maxLength: 253
+                            type: string
                           route:
                             properties:
                               headers:
@@ -853,6 +1092,26 @@ spec:
                                 minimum: 0
                                 type: integer
                             type: object
+                          targets:
+                            items:
+                              properties:
+                                address:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                failover:
+                                  enum:
+                                  - Enabled
+                                  - Disabled
+                                  type: string
+                                weight:
+                                  maximum: 65535
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - address
+                              type: object
+                            type: array
                           upstream:
                             properties:
                               auth:
@@ -2233,6 +2492,96 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 properties:
                                   allow:
@@ -2395,6 +2744,96 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 properties:
                                   allow:
@@ -2480,6 +2919,30 @@ spec:
                           cache:
                             properties:
                               discover:
+                                properties:
+                                  cacheScope:
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              promptsList:
+                                properties:
+                                  cacheScope:
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              resourcesList:
                                 properties:
                                   cacheScope:
                                     enum:
@@ -3352,6 +3815,96 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 properties:
                                   allow:
@@ -3514,6 +4067,96 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                properties:
+                                  allow:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    items:
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 properties:
                                   allow:
@@ -3592,6 +4235,34 @@ spec:
                         type: object
                       config:
                         properties:
+                          balancer:
+                            properties:
+                              algorithm:
+                                enum:
+                                - consistent-hashing
+                                - least-connections
+                                - lowest-latency
+                                - round-robin
+                                minLength: 1
+                                type: string
+                              consistent-hashing:
+                                properties:
+                                  hashOnHeader:
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - hashOnHeader
+                                type: object
+                              least-connections:
+                                type: object
+                              lowest-latency:
+                                type: object
+                              round-robin:
+                                type: object
+                            required:
+                            - algorithm
+                            type: object
                           caCertificates:
                             items:
                               properties:
@@ -3644,6 +4315,13 @@ spec:
                             maximum: 2147483646
                             minimum: 0
                             type: integer
+                          path:
+                            maxLength: 253
+                            pattern: ^/
+                            type: string
+                          protocol:
+                            maxLength: 253
+                            type: string
                           proxy:
                             properties:
                               auth:
@@ -4060,6 +4738,26 @@ spec:
                                 minimum: 0
                                 type: integer
                             type: object
+                          targets:
+                            items:
+                              properties:
+                                address:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                failover:
+                                  enum:
+                                  - Enabled
+                                  - Disabled
+                                  type: string
+                                weight:
+                                  maximum: 65535
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - address
+                              type: object
+                            type: array
                           upstream:
                             properties:
                               auth:
@@ -4169,6 +4867,67 @@ spec:
                           - name
                           type: object
                         type: array
+                      prompts:
+                        items:
+                          properties:
+                            access:
+                              properties:
+                                acls:
+                                  properties:
+                                    allow:
+                                      items:
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    allowWhen:
+                                      items:
+                                        type: string
+                                      type: array
+                                    deny:
+                                      items:
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    denyWhen:
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
+                              type: object
+                            name:
+                              maxLength: 128
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
+                              type: string
+                          required:
+                          - access
+                          - name
+                          type: object
+                        type: array
                       rateLimiting:
                         properties:
                           limits:
@@ -4197,6 +4956,66 @@ spec:
                         required:
                         - limits
                         type: object
+                      resources:
+                        items:
+                          properties:
+                            access:
+                              properties:
+                                acls:
+                                  properties:
+                                    allow:
+                                      items:
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    allowWhen:
+                                      items:
+                                        type: string
+                                      type: array
+                                    deny:
+                                      items:
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    denyWhen:
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
+                              type: object
+                            uri:
+                              maxLength: 2048
+                              minLength: 1
+                              type: string
+                          required:
+                          - access
+                          - uri
+                          type: object
+                        type: array
                       tokenVault:
                         properties:
                           cache:
@@ -4578,6 +5397,34 @@ spec:
                     properties:
                       config:
                         properties:
+                          balancer:
+                            properties:
+                              algorithm:
+                                enum:
+                                - consistent-hashing
+                                - least-connections
+                                - lowest-latency
+                                - round-robin
+                                minLength: 1
+                                type: string
+                              consistent-hashing:
+                                properties:
+                                  hashOnHeader:
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - hashOnHeader
+                                type: object
+                              least-connections:
+                                type: object
+                              lowest-latency:
+                                type: object
+                              round-robin:
+                                type: object
+                            required:
+                            - algorithm
+                            type: object
                           caCertificates:
                             items:
                               properties:
@@ -4630,6 +5477,13 @@ spec:
                             maximum: 2147483646
                             minimum: 0
                             type: integer
+                          path:
+                            maxLength: 253
+                            pattern: ^/
+                            type: string
+                          protocol:
+                            maxLength: 253
+                            type: string
                           route:
                             properties:
                               headers:
@@ -5032,6 +5886,26 @@ spec:
                                 maxLength: 253
                                 type: string
                             type: object
+                          targets:
+                            items:
+                              properties:
+                                address:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                failover:
+                                  enum:
+                                  - Enabled
+                                  - Disabled
+                                  type: string
+                                weight:
+                                  maximum: 65535
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - address
+                              type: object
+                            type: array
                           toolsCacheTtlSeconds:
                             minimum: 0
                             type: integer
@@ -5143,6 +6017,127 @@ spec:
                               type: string
                           required:
                           - name
+                          type: object
+                        type: array
+                      prompts:
+                        items:
+                          properties:
+                            access:
+                              properties:
+                                acls:
+                                  properties:
+                                    allow:
+                                      items:
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    allowWhen:
+                                      items:
+                                        type: string
+                                      type: array
+                                    deny:
+                                      items:
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    denyWhen:
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
+                              type: object
+                            name:
+                              maxLength: 128
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
+                              type: string
+                          required:
+                          - access
+                          - name
+                          type: object
+                        type: array
+                      resources:
+                        items:
+                          properties:
+                            access:
+                              properties:
+                                acls:
+                                  properties:
+                                    allow:
+                                      items:
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    allowWhen:
+                                      items:
+                                        type: string
+                                      type: array
+                                    deny:
+                                      items:
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    denyWhen:
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
+                              type: object
+                            uri:
+                              maxLength: 2048
+                              minLength: 1
+                              type: string
+                          required:
+                          - access
+                          - uri
                           type: object
                         type: array
                       tokenVault:

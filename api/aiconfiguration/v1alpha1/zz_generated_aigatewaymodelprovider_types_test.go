@@ -36,14 +36,17 @@ func TestAIGatewayModelProviderConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 		{name: "dashscope", payload: []byte("{\"type\":\"dashscope\",\"dashscope\":{}}")},
 		{name: "databricks", payload: []byte("{\"type\":\"databricks\",\"databricks\":{}}")},
 		{name: "deepseek", payload: []byte("{\"type\":\"deepseek\",\"deepseek\":{}}")},
+		{name: "fireworks", payload: []byte("{\"type\":\"fireworks\",\"fireworks\":{}}")},
 		{name: "gemini", payload: []byte("{\"type\":\"gemini\",\"gemini\":{}}")},
 		{name: "huggingface", payload: []byte("{\"type\":\"huggingface\",\"huggingface\":{}}")},
 		{name: "kimi", payload: []byte("{\"type\":\"kimi\",\"kimi\":{}}")},
 		{name: "llama2", payload: []byte("{\"type\":\"llama2\",\"llama2\":{}}")},
+		{name: "meta", payload: []byte("{\"type\":\"meta\",\"meta\":{}}")},
 		{name: "mistral", payload: []byte("{\"type\":\"mistral\",\"mistral\":{}}")},
 		{name: "ollama", payload: []byte("{\"type\":\"ollama\",\"ollama\":{}}")},
 		{name: "openai", payload: []byte("{\"type\":\"openai\",\"openai\":{}}")},
 		{name: "sagemaker", payload: []byte("{\"type\":\"sagemaker\",\"sagemaker\":{}}")},
+		{name: "togetherai", payload: []byte("{\"type\":\"togetherai\",\"togetherai\":{}}")},
 		{name: "typesafe", payload: []byte("{\"type\":\"typesafe\",\"typesafe\":{}}")},
 		{name: "vercel", payload: []byte("{\"type\":\"vercel\",\"vercel\":{}}")},
 		{name: "vllm", payload: []byte("{\"type\":\"vllm\",\"vllm\":{}}")},
@@ -236,6 +239,22 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
+			name:    "AIGatewayModelProviderConfig/fireworks",
+			payload: []byte("{\"type\":\"fireworks\",\"fireworks\":{}}"),
+			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
+				t.Helper()
+				if target.AIGatewayModelProviderConfig == nil {
+					t.Fatalf("AIGatewayModelProviderConfig should be allocated")
+				}
+				if got, want := target.AIGatewayModelProviderConfig.Type, AIGatewayModelProviderConfigTypeFireworks; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.AIGatewayModelProviderConfig.Fireworks == nil {
+					t.Fatalf("AIGatewayModelProviderConfig.Fireworks should be allocated")
+				}
+			},
+		},
+		{
 			name:    "AIGatewayModelProviderConfig/gemini",
 			payload: []byte("{\"type\":\"gemini\",\"gemini\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
@@ -300,6 +319,22 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
+			name:    "AIGatewayModelProviderConfig/meta",
+			payload: []byte("{\"type\":\"meta\",\"meta\":{}}"),
+			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
+				t.Helper()
+				if target.AIGatewayModelProviderConfig == nil {
+					t.Fatalf("AIGatewayModelProviderConfig should be allocated")
+				}
+				if got, want := target.AIGatewayModelProviderConfig.Type, AIGatewayModelProviderConfigTypeMeta; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.AIGatewayModelProviderConfig.Meta == nil {
+					t.Fatalf("AIGatewayModelProviderConfig.Meta should be allocated")
+				}
+			},
+		},
+		{
 			name:    "AIGatewayModelProviderConfig/mistral",
 			payload: []byte("{\"type\":\"mistral\",\"mistral\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
@@ -360,6 +395,22 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 				}
 				if target.AIGatewayModelProviderConfig.Sagemaker == nil {
 					t.Fatalf("AIGatewayModelProviderConfig.Sagemaker should be allocated")
+				}
+			},
+		},
+		{
+			name:    "AIGatewayModelProviderConfig/togetherai",
+			payload: []byte("{\"type\":\"togetherai\",\"togetherai\":{}}"),
+			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
+				t.Helper()
+				if target.AIGatewayModelProviderConfig == nil {
+					t.Fatalf("AIGatewayModelProviderConfig should be allocated")
+				}
+				if got, want := target.AIGatewayModelProviderConfig.Type, AIGatewayModelProviderConfigTypeTogetherai; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.AIGatewayModelProviderConfig.Togetherai == nil {
+					t.Fatalf("AIGatewayModelProviderConfig.Togetherai should be allocated")
 				}
 			},
 		},

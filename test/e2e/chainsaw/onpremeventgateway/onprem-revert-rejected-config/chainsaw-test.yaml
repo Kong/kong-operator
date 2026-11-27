@@ -10,10 +10,11 @@ metadata:
   name: eventgateway-onprem-revert-rejected-config
 spec:
   description: |
-    An OnPremEventGateway with a backend cluster:
+    An OnPremEventGateway with a backend cluster, a virtual cluster and an ACL
+    policy:
     1. The gateway is Programmed.
-    2. The backend cluster gets a bootstrap server without a port, which the CRD
-       accepts and gw-admin rejects: the gateway reports the push failed.
+    2. The policy gets a condition gw-admin can't compile: the gateway reports
+       the push failed.
     3. The change is reverted: the gateway is Programmed again. It can only turn
        Programmed from the failure above once gw-admin accepted the revert.
   bindings:
@@ -33,7 +34,7 @@ spec:
         - apply:
             file: ../onprem-shared/gateway.yaml
         - apply:
-            file: 01-backend-cluster.yaml
+            file: 01-entities.yaml
         - assert:
             file: ../onprem-shared/assert-gateway-programmed.yaml
 
@@ -42,13 +43,15 @@ spec:
         - patch:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
-              kind: EventGatewayBackendCluster
+              kind: EventGatewayVirtualClusterPolicy
               metadata:
-                name: ($backend_cluster_name)
+                name: acls
               spec:
                 apiSpec:
-                  bootstrapServers:
-                    - kafka-without-a-port
+                  acls:
+                    # A bare identifier where a string belongs: gw-admin
+                    # refuses the expression, which the CRD can't check.
+                    condition: "{{ context.topic.name == not_a_topic }}"
         - assert:
             resource:
               apiVersion: eventgateway.konghq.com/v1alpha1
@@ -65,13 +68,13 @@ spec:
         - patch:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
-              kind: EventGatewayBackendCluster
+              kind: EventGatewayVirtualClusterPolicy
               metadata:
-                name: ($backend_cluster_name)
+                name: acls
               spec:
                 apiSpec:
-                  bootstrapServers:
-                    - kafka.example.svc:9092
+                  acls:
+                    condition: "{{ context.topic.name == 'orders' }}"
         - assert:
             file: ../onprem-shared/assert-gateway-programmed.yaml
 
