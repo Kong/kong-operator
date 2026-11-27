@@ -28,7 +28,7 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
       type: string
-    - description: The Resource is hardened
+    - description: The Admin GUI service address
       jsonPath: .status.adminGUIServiceStatus.address.value
       name: Admin GUI
       type: string
@@ -267,6 +267,9 @@ spec:
                         - key
                         - name
                         type: object
+                        x-kubernetes-validations:
+                        - message: spec.secretRef is required when type is 'secretRef'
+                          rule: self.type != 'secretRef' || has(self.secretRef)
                       type:
                         description: |-
                           Type represents the type of specifying the license for the DBBackedHybridControlPlane.
@@ -9887,6 +9890,9 @@ spec:
                             default: enabled
                             description: Enabled represents whether the Admin GUI
                               is enabled or disabled for the DBBackedHybridControlPlane.
+                            enum:
+                            - enabled
+                            - disabled
                             type: string
                           port:
                             default: 8445
@@ -9900,7 +9906,6 @@ spec:
                             - ClusterIP
                             - NodePort
                             - LoadBalancer
-                            - ExternalName
                             type: string
                         type: object
                     type: object

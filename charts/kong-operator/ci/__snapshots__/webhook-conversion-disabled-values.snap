@@ -62661,7 +62661,7 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
       type: string
-    - description: The Resource is hardened
+    - description: The Admin GUI service address
       jsonPath: .status.adminGUIServiceStatus.address.value
       name: Admin GUI
       type: string
@@ -62797,6 +62797,9 @@ spec:
                         - key
                         - name
                         type: object
+                        x-kubernetes-validations:
+                        - message: spec.secretRef is required when type is 'secretRef'
+                          rule: self.type != 'secretRef' || has(self.secretRef)
                       type:
                         enum:
                         - secretRef
@@ -67117,6 +67120,9 @@ spec:
                         properties:
                           enabled:
                             default: enabled
+                            enum:
+                            - enabled
+                            - disabled
                             type: string
                           port:
                             default: 8445
@@ -67128,7 +67134,6 @@ spec:
                             - ClusterIP
                             - NodePort
                             - LoadBalancer
-                            - ExternalName
                             type: string
                         type: object
                     type: object

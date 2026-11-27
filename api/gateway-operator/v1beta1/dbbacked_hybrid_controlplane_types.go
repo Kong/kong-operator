@@ -35,7 +35,7 @@ import (
 // +kubebuilder:resource:shortName=dbcp,categories=kong
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
-// +kubebuilder:printcolumn:name="Admin GUI",description="The Resource is hardened",type=string,JSONPath=`.status.adminGUIServiceStatus.address.value`
+// +kubebuilder:printcolumn:name="Admin GUI",description="The Admin GUI service address",type=string,JSONPath=`.status.adminGUIServiceStatus.address.value`
 // +kong:channels=kong-operator
 type DBBackedHybridControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -94,6 +94,7 @@ type DBBackedHybridControlPlaneLicense struct {
 	Type DBBackedHybridControlPlaneLicenseType `json:"type"`
 
 	// SecretRef represents a reference to a Kubernetes Secret that contains the license for the DBBackedHybridControlPlane.
+	// +kubebuilder:validation:XValidation:rule="self.type != 'secretRef' || has(self.secretRef)",message="spec.secretRef is required when type is 'secretRef'"
 	// +optional
 	SecretRef *DBBackedHybridControlPlaneLicenseSecretRef `json:"secretRef,omitempty"`
 }
@@ -267,6 +268,7 @@ type DBBackedHybridControlPlaneServiceOptions struct {
 }
 
 // AdminGUIState represents the enabled or disabled state of the Admin GUI service.
+// +kubebuilder:validation:Enum=enabled;disabled
 type AdminGUIState string
 
 const (
@@ -285,7 +287,7 @@ type DBBackedHybridControlPlaneServiceAdminGUIOptions struct {
 	Enabled AdminGUIState `json:"enabled,omitempty"`
 
 	// Type represents the type of the service for the Admin GUI of the DBBackedHybridControlPlane.
-	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer;ExternalName
+	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer
 	// +optional
 	// +kubebuilder:default=LoadBalancer
 	Type corev1.ServiceType `json:"type,omitempty"`
