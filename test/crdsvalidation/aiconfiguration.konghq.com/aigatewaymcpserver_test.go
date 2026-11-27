@@ -4,6 +4,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -373,6 +377,17 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				ExpectedErrorMessage: new("exactly one of url and targets must be set"),
 			},
 			{
+				Name: "conversion-listener with an empty targets list is rejected",
+				// The typed client drops an empty list (omitempty), so the
+				// create re-enters with neither field set and the
+				// exactly-one rule fires first.
+				TestObject: conversionListener(func(cfg *aiconfigurationv1alpha1.AIGatewayMCPServerConversionListenerConfig) {
+					cfg.URL = ""
+					cfg.Targets = []aiconfigurationv1alpha1.AIGatewayUpstreamTarget{}
+				}),
+				ExpectedErrorMessage: new("exactly one of url and targets must be set"),
+			},
+			{
 				Name: "conversion-listener path without targets is rejected",
 				TestObject: conversionListener(func(cfg *aiconfigurationv1alpha1.AIGatewayMCPServerConversionListenerConfig) {
 					cfg.Path = "/mcp"
@@ -427,6 +442,41 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				}),
 			},
 		}.RunWithConfig(t, cfg, scheme)
+
+		// The typed client drops an empty list (omitempty), so an explicit
+		// empty targets list only reaches the API from a raw object:
+		// exercise the non-empty rule there.
+		cl, err := client.New(cfg, client.Options{Scheme: scheme})
+		require.NoError(t, err)
+		mcpServer := &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": aiconfigurationv1alpha1.GroupVersion.String(),
+			"kind":       "AIGatewayMCPServer",
+			"metadata": map[string]any{
+				"name":      "mcp-server-empty-targets",
+				"namespace": ns.Name,
+			},
+			"spec": map[string]any{
+				"aiGatewayRef": map[string]any{
+					"namespacedRef": map[string]any{"name": "test-ai-gateway"},
+				},
+				"apiSpec": map[string]any{
+					"type": "conversion-listener",
+					"conversion-listener": map[string]any{
+						"name":        "empty-targets-mcp",
+						"displayName": "Empty Targets MCP",
+						"config": map[string]any{
+							"targets": []any{},
+							"route":   map[string]any{"paths": []any{"/mcp"}},
+						},
+						"tools": []any{
+							map[string]any{"name": "search_flights", "description": "Search flights", "method": "GET", "path": "/flights"},
+						},
+					},
+				},
+			},
+		}}
+		err = cl.Create(t.Context(), mcpServer)
+		require.ErrorContains(t, err, "targets must not be empty")
 	})
 
 	// Tool names must match ^[A-Za-z0-9._-]+$ and be at most 128 characters

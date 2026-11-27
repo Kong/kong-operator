@@ -517,6 +517,8 @@ spec:
                     x-kubernetes-validations:
                     - message: exactly one of url and targets must be set
                       rule: has(self.url) != has(self.targets)
+                    - message: targets must not be empty
+                      rule: '!has(self.targets) || size(self.targets) > 0'
                     - message: balancer, protocol, and path are only valid with targets
                       rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
                     - message: failover targets are not supported with the consistent-hashing algorithm
@@ -6688,6 +6690,8 @@ spec:
                         x-kubernetes-validations:
                         - message: exactly one of url and targets must be set
                           rule: has(self.url) != has(self.targets)
+                        - message: targets must not be empty
+                          rule: '!has(self.targets) || size(self.targets) > 0'
                         - message: balancer, protocol, and path are only valid with targets
                           rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
                         - message: failover targets are not supported with the consistent-hashing algorithm
@@ -10284,6 +10288,8 @@ spec:
                         x-kubernetes-validations:
                         - message: exactly one of url and targets must be set
                           rule: has(self.url) != has(self.targets)
+                        - message: targets must not be empty
+                          rule: '!has(self.targets) || size(self.targets) > 0'
                         - message: balancer, protocol, and path are only valid with targets
                           rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
                         - message: failover targets are not supported with the consistent-hashing algorithm
@@ -11431,6 +11437,8 @@ spec:
                         x-kubernetes-validations:
                         - message: exactly one of url and targets must be set
                           rule: has(self.url) != has(self.targets)
+                        - message: targets must not be empty
+                          rule: '!has(self.targets) || size(self.targets) > 0'
                         - message: balancer, protocol, and path are only valid with targets
                           rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
                         - message: failover targets are not supported with the consistent-hashing algorithm

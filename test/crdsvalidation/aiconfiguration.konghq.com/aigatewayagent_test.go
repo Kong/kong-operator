@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -188,6 +190,17 @@ func TestAIGatewayAgent(t *testing.T) {
 				ExpectedErrorMessage: new("exactly one of url and targets must be set"),
 			},
 			{
+				Name: "an empty targets list is rejected",
+				// The typed client drops an empty list (omitempty), so the
+				// create re-enters with neither field set and the
+				// exactly-one rule fires first.
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.URL = ""
+					cfg.Targets = []aiconfigurationv1alpha1.AIGatewayUpstreamTarget{}
+				}),
+				ExpectedErrorMessage: new("exactly one of url and targets must be set"),
+			},
+			{
 				Name: "protocol without targets is rejected",
 				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
 					cfg.Protocol = "https"
@@ -222,5 +235,34 @@ func TestAIGatewayAgent(t *testing.T) {
 				}),
 			},
 		}.RunWithConfig(t, cfg, scheme)
+
+		// The typed client drops an empty list (omitempty), so an explicit
+		// empty targets list only reaches the API from a raw object:
+		// exercise the non-empty rule there.
+		cl, err := client.New(cfg, client.Options{Scheme: scheme})
+		require.NoError(t, err)
+		rawAgent := &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": aiconfigurationv1alpha1.GroupVersion.String(),
+			"kind":       "AIGatewayAgent",
+			"metadata": map[string]any{
+				"name":      "agent-empty-targets",
+				"namespace": ns.Name,
+			},
+			"spec": map[string]any{
+				"aiGatewayRef": map[string]any{
+					"namespacedRef": map[string]any{"name": "test-ai-gw-cp"},
+				},
+				"apiSpec": map[string]any{
+					"name":        "empty-targets-agent",
+					"displayName": "Empty Targets Agent",
+					"type":        "http",
+					"config": map[string]any{
+						"targets": []any{},
+					},
+				},
+			},
+		}}
+		err = cl.Create(t.Context(), rawAgent)
+		require.ErrorContains(t, err, "targets must not be empty")
 	})
 }
