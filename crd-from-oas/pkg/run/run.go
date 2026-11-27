@@ -150,6 +150,7 @@ func (r *Runner) Run(
 			SkipGetForUIDEntities:      skipGetForUIDEntities,
 			ManualGetForUIDEntities:    manualGetForUIDEntities,
 			Categories:                 agvConfig.Categories,
+			Validation:                 agvConfig.Validation,
 			References:                 agvConfig.ReferencesConfig(pathToEntityName),
 			Associations:               agvConfig.AssociationsConfig(pathToEntityName),
 			SourceConfig:               agvConfig.SourceConfigs(pathToEntityName),

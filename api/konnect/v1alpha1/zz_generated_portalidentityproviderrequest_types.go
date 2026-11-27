@@ -57,7 +57,7 @@ type PortalIdentityProviderRequestSpec struct {
 
 // PortalIdentityProviderRequestAPISpec defines the API spec fields for PortalIdentityProviderRequest.
 type PortalIdentityProviderRequestAPISpec struct {
-	//
+	// The configuration data for creating an authentication integration.
 	//
 	// +optional
 	Config *PortalIdentityProviderRequestConfig `json:"config,omitempty"`
@@ -119,7 +119,7 @@ type PortalIdentityProviderRequestConfig struct {
 	// OIDC configuration.
 	//
 	// +optional
-	OIDC *PortalOIDCIdentityProviderConfig `json:"oidc,omitempty"`
+	OIDC *CreateOIDCIdentityProviderConfig `json:"oidc,omitempty"`
 	// SAML configuration.
 	//
 	// +optional
@@ -188,7 +188,7 @@ func (u *PortalIdentityProviderRequestConfig) UnmarshalJSON(data []byte) error {
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val PortalOIDCIdentityProviderConfig
+		var val CreateOIDCIdentityProviderConfig
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling PortalIdentityProviderRequestConfig OIDC: %w", err)
 		}

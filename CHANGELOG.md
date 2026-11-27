@@ -73,6 +73,26 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- `PortalIdentityProviderRequest` `spec.apiSpec.config.oidc.clientSecret` is
+  now required and is an object, not a string. Change
+  `clientSecret: <secret>` to `clientSecret: {type: inline, value: <secret>}`,
+  or use `type: secretRef` with `secretRef` to read it from a Kubernetes
+  Secret. Konnect also requires `scopes`, when set, to include `openid`.
+  The Go type `PortalOIDCIdentityProviderConfig` is renamed to
+  `CreateOIDCIdentityProviderConfig`.
+  [#6787](https://github.com/Kong/kong-operator/pull/6787)
+- The `AIGatewayAuthStrategy` CRD now matches the validation that Konnect
+  already applies: key-auth entries no longer accept the read-only
+  `spec.apiSpec.key-auth.config.anonymous`, `principals.directory` must match
+  `^[a-zA-Z0-9_-]+$`, and openid-connect `leeway` and `timeout` must not be
+  negative. Remove `anonymous` from manifests before upgrading. The Go types
+  `AIGWKeyAuthGeneratedConfig*` and `AIGWOpenIDConnectGeneratedConfig*` are
+  renamed to `AIGatewayAuthStrategyKeyAuthConfig*` and
+  `AIGatewayAuthStrategyOpenIDConnectConfig*`.
+  [#6787](https://github.com/Kong/kong-operator/pull/6787)
+
 ### Added
 
 - Added the `condition` field to `KongPlugin` and `KongClusterPlugin`. It sets the
@@ -106,6 +126,12 @@
 
 ### Changed
 
+- The operator now uses the internal Konnect SDK (`sdk-konnect-go-internal`),
+  so later releases can support Konnect APIs before they are public.
+  `AIGatewayAgent` and `AIGatewayMCPServer` no longer require
+  `spec.apiSpec.config.url`, and `PortalCustomization` gains
+  `spec.apiSpec.theme.borderRadius`.
+  [#6787](https://github.com/Kong/kong-operator/pull/6787)
 - Konnect: Kong Gateway entities are no longer PUT to Konnect on every sync
   period. The operator sends a PUT only when the entity's desired state changes
   in Kubernetes, including referenced objects such as KongPlugins and Secrets.
@@ -121,6 +147,28 @@
 
 ### Fixes
 
+- Event Gateway CRDs refuse the lists Konnect and gw-admin refuse: an empty
+  list where an item is required (e.g. `bootstrapServers: []` or ACL
+  `rules: []`), more items than allowed, and items outside the enum, pattern
+  or length of the API (e.g. a bootstrap server without a port or
+  `tlsVersions: [tls11]`). `EventGatewayListener` `ports` holds at most 64
+  entries, and an integer port must be between 1 and 65535. A stored object
+  holding a refused value can't change the list holding it until the value is
+  fixed.
+  [#6823](https://github.com/Kong/kong-operator/pull/6823)
+- Event Gateway CRDs and `KonnectEventGateway` refuse the names Konnect
+  refuses: a name must start and end with a letter or a digit, non-ASCII
+  included, and contain only those, spaces and `_ - . : / + '` (e.g. `bc!` or
+  a one-character name is refused). An inline sensitive value
+  (`type: inline`), such as a static key, a trust bundle CA, a schema registry
+  password or a TLS certificate or key, must not be empty.
+  [#6826](https://github.com/Kong/kong-operator/pull/6826)
+- The admission webhook no longer fails or wrongly rejects changes while
+  another `Gateway` is starting, for example `KongPlugin` changes failing with
+  `internal validation error`. It now validates against a Kong Gateway that
+  already received its configuration and license, instead of one still
+  waiting for its first sync.
+  [#6808](https://github.com/Kong/kong-operator/pull/6808)
 - Deleting a Konnect entity whose `controlPlaneRef` was never resolved, for
   example one that references a Control Plane Group or a Control Plane that was
   never programmed, no longer hangs on the `gateway.konghq.com/konnect-cleanup`
@@ -149,13 +197,18 @@
   operator no longer rejects the configuration.
   [#6801](https://github.com/Kong/kong-operator/pull/6801)
 - `KegDataPlane`: revoking the `KongReferenceGrant` that lets a data plane of
-  another namespace reference its `OnPremEventGateway` now also deletes the
-  client certificate `Secret`s the operator created for it: the Automatic ones
-  and the copies of a Manual one. A `KongReferenceGrant` letting the
-  `EventGatewayDataPlaneCertificate`s of that namespace reference the gateway
-  still trusts any certificate they register: revoking the data planes of a
-  namespace takes deleting that grant too.
-  [#6762](https://github.com/Kong/kong-operator/pull/6762)
+  another namespace reference its `KonnectEventGateway` or
+  `OnPremEventGateway` now also deletes the client certificate `Secret`s the
+  operator created for it: the Automatic ones and, for an
+  `OnPremEventGateway`, the copies of a Manual one. A `KongReferenceGrant`
+  letting the `EventGatewayDataPlaneCertificate`s of that namespace reference
+  the gateway still trusts any certificate they register: revoking the data
+  planes of a namespace takes deleting that grant too.
+  [#6762](https://github.com/Kong/kong-operator/pull/6762), [#6806](https://github.com/Kong/kong-operator/pull/6806)
+- An explicit `maxRequestBodySize: 0` (unlimited) on `AIGatewayAgent`,
+  `AIGatewayMCPServer` and `AIGatewayModel` is now sent to Konnect and on-prem
+  AI Gateways. Before, the operator dropped it, and the 8 MiB default applied.
+  [#6788](https://github.com/Kong/kong-operator/pull/6788)
 
 ## [v2.4.0]
 

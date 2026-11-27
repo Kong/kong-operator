@@ -330,6 +330,7 @@ spec:
                                 description: Algorithm designates the type of configuration.
                                 enum:
                                 - consistent-hashing
+                                - intelligent
                                 - least-connections
                                 - lowest-latency
                                 - lowest-usage
@@ -399,6 +400,201 @@ spec:
                                     maximum: 2147483646
                                     minimum: 1
                                     type: integer
+                                type: object
+                              intelligent:
+                                description: Intelligent configuration.
+                                properties:
+                                  classifier:
+                                    description: |-
+                                      The classifier model the intelligent balancer asks what kind of work a
+                                      conversation is, before it
+                                      selects a target.
+                                      If the classifier does not answer in time or its answer cannot be used, the
+                                      balancer selects a target for general work.
+
+                                      **Requires a minimum runtime version of `2.5`**.
+                                    properties:
+                                      custom:
+                                        description: AIGatewayModelBalancerIntelligentClassifierCustom
+                                          configuration.
+                                        properties:
+                                          auth:
+                                            description: |-
+                                              The credentials sent to the classifier service with each request.
+
+                                              **Requires a minimum runtime version of `2.5`**.
+                                            properties:
+                                              basic:
+                                                description: AIGatewayModelBalancerIntelligentClassifierAuthBasic
+                                                  configuration.
+                                                properties:
+                                                  headers:
+                                                    description: The header sent with
+                                                      each request to the classifier
+                                                      service.
+                                                    items:
+                                                      description: |-
+                                                        AIGatewayModelBalancerIntelligentClassifierAuthBasicHeaders The header sent
+                                                        with each request to the classifier service.
+                                                      properties:
+                                                        name:
+                                                          description: |-
+                                                            The name of the header used for authentication.
+                                                            This field is
+                                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                                          maxLength: 253
+                                                          minLength: 1
+                                                          type: string
+                                                        value:
+                                                          description: |-
+                                                            The value of the header, for example `Bearer key...`.
+                                                            This field is
+                                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                                          maxLength: 253
+                                                          type: string
+                                                      required:
+                                                      - name
+                                                      type: object
+                                                    maxItems: 1
+                                                    type: array
+                                                type: object
+                                              type:
+                                                description: Type designates the type
+                                                  of configuration.
+                                                enum:
+                                                - basic
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                          contextWindow:
+                                            description: |-
+                                              The number of tokens the classifier model can read, from the model
+                                              provider's documentation.
+                                              The request text sent to the classifier is cut to fit.
+                                            maximum: 1048576
+                                            minimum: 4096
+                                            type: integer
+                                          format:
+                                            description: |-
+                                              The endpoint path appended to `url`: the path of the System One decisions
+                                              API.
+                                              Some hosts serve
+                                              it at another path.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          name:
+                                            description: The name of the classifier
+                                              model, sent in each request.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          timeout:
+                                            description: The time in milliseconds
+                                              to wait for the classifier's answer.
+                                            maximum: 60000
+                                            minimum: 100
+                                            type: integer
+                                          url:
+                                            description: |-
+                                              The classifier service's base URL.
+                                              The `format` path is appended to it.
+                                              It has no query string,
+                                              fragment or user info.
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^https?://[^?#@]*$
+                                            type: string
+                                        required:
+                                        - contextWindow
+                                        - name
+                                        - url
+                                        type: object
+                                      type:
+                                        description: Type designates the type of configuration.
+                                        enum:
+                                        - custom
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                  connectTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  costQualityTradeoff:
+                                    description: |-
+                                      How the balancer weighs cost versus quality when selecting a target.
+                                      `cost` favors the cheapest available target, `quality` favors the
+                                      highest-quality target, and `balanced` weighs both.
+                                    enum:
+                                    - balanced
+                                    - cost
+                                    - quality
+                                    maxLength: 253
+                                    type: string
+                                  failTimeout:
+                                    description: |-
+                                      The period of time (in milliseconds) the target will be considered
+                                      unavailable after the number of unsuccessful attempts reaches `max_fails`.
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  failoverCriteria:
+                                    description: |-
+                                      Specifies in which cases an upstream response should be failover to the next
+                                      target.
+                                      Each option in the array is equivalent to the function of
+                                      https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream
+                                    items:
+                                      type: string
+                                    type: array
+                                  maxFails:
+                                    description: |-
+                                      Number of unsuccessful attempts to communicate with a target that should
+                                      occur in the duration defined by `fail_timeout` before the target is
+                                      considered unavailable.
+                                      The zero value disables the circuit breaker.
+                                      What is considered an unsuccessful attempt is defined by
+                                      `failover_criteria`.
+                                      Note the cases of `error`, `timeout` and `invalid_header` are always
+                                      considered unsuccessful attempts, while the cases of `http_403` and
+                                      `http_404` are never considered unsuccessful attempts.
+                                    maximum: 32767
+                                    minimum: 0
+                                    type: integer
+                                  readTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  retries:
+                                    description: The number of retries to execute
+                                      upon failure to proxy.
+                                    maximum: 32767
+                                    minimum: 0
+                                    type: integer
+                                  slots:
+                                    description: The number of slots in the load balancer
+                                      algorithm.
+                                    maximum: 65536
+                                    minimum: 10
+                                    type: integer
+                                  version:
+                                    description: The version of the intelligent balancing
+                                      algorithm.
+                                    enum:
+                                    - v1
+                                    maxLength: 253
+                                    type: string
+                                  writeTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                required:
+                                - classifier
                                 type: object
                               least-connections:
                                 description: LeastConnections configuration.
@@ -1654,9 +1850,15 @@ spec:
                                 type: string
                             type: object
                           maxRequestBodySize:
-                            description: Maximum size of request body to parse. Set
-                              to 0 for unlimited.
-                            maximum: 2147483646
+                            description: |-
+                              The maximum size, in bytes, of a request body that the gateway reads and
+                              sends to the model.
+                              A request with a larger body fails. Set to 0 for no limit.
+                              If you do not set a value, the gateway uses the request size limit that the
+                              model's providers publish,
+                              with defaults to 8 MB.
+                              If the targets use more than one provider, the gateway uses the highest of
+                              these limits.
                             minimum: 0
                             type: integer
                           proxy:
@@ -1934,7 +2136,8 @@ spec:
                         - route
                         type: object
                       datastores:
-                        description: Names of the Datastores this model references.
+                        description: The Datastores this model references, with the
+                          feature that uses each one.
                         items:
                           description: |-
                             AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
@@ -2328,6 +2531,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -2598,6 +2814,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -2840,6 +3069,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -3123,6 +3365,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -3379,6 +3634,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -3641,6 +3909,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -3897,6 +4178,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -4139,6 +4433,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -4389,6 +4696,274 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
+                                fireworks:
+                                  description: Fireworks configuration.
+                                  properties:
+                                    cacheReadCost:
+                                      description: Cost per 1M cache-read (cached)
+                                        prompt tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      description: |-
+                                        Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+                                        tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      description: Cost per 1M cache-write prompt
+                                        tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      description: |-
+                                        Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+                                        Configure this when the upstream provider charges differently for different
+                                        cache TTLs.
+                                      items:
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M cache-write prompt
+                                              tokens for this TTL.
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            description: Cache TTL this price applies
+                                              to, e.g. "5m" or "1h".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      description: |-
+                                        Above an input-token threshold, scale input and output pricing by the
+                                        corresponding factor.
+                                      items:
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
+                                        properties:
+                                          above:
+                                            description: Input-token threshold above
+                                              which the factors apply, e.g. "128k"
+                                              or "1m".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            description: Multiplier applied to input
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            description: Multiplier applied to output
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      description: The number of dimensions for embedding
+                                        outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      description: |-
+                                        Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      description: The maximum number of tokens to
+                                        generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      description: |-
+                                        Per-modality override of `output_cost`, in cost per 1M output tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      description: |-
+                                        Multiplier applied to the whole request for a service tier.
+                                        The default factor is 1.0 when no tier matches.
+                                      items:
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
+                                        properties:
+                                          factor:
+                                            description: Multiplier applied to the
+                                              whole request for this service tier.
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            description: |-
+                                              Matched case-insensitively as a substring of the vendor's reported service
+                                              tier (e.g.
+                                              "priority", "flex", "throughput").
+                                              When more than one entry matches, the longest (most specific) tier wins;
+                                              array order does not matter.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      description: |-
+                                        Controls randomness in the model output.
+                                        Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      description: |-
+                                        Limits the number of highest-probability tokens considered during
+                                        generation.
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      description: |-
+                                        Nucleus sampling probability mass.
+                                        Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -4658,6 +5233,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -4900,6 +5488,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -5164,6 +5765,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -5416,6 +6030,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -5425,6 +6052,261 @@ spec:
                                   required:
                                   - format
                                   - upstreamURL
+                                  type: object
+                                meta:
+                                  description: Meta configuration.
+                                  properties:
+                                    cacheReadCost:
+                                      description: Cost per 1M cache-read (cached)
+                                        prompt tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      description: |-
+                                        Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+                                        tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      description: Cost per 1M cache-write prompt
+                                        tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      description: |-
+                                        Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+                                        Configure this when the upstream provider charges differently for different
+                                        cache TTLs.
+                                      items:
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M cache-write prompt
+                                              tokens for this TTL.
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            description: Cache TTL this price applies
+                                              to, e.g. "5m" or "1h".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      description: |-
+                                        Above an input-token threshold, scale input and output pricing by the
+                                        corresponding factor.
+                                      items:
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
+                                        properties:
+                                          above:
+                                            description: Input-token threshold above
+                                              which the factors apply, e.g. "128k"
+                                              or "1m".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            description: Multiplier applied to input
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            description: Multiplier applied to output
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      description: The number of dimensions for embedding
+                                        outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      description: |-
+                                        Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      description: The maximum number of tokens to
+                                        generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      description: |-
+                                        Per-modality override of `output_cost`, in cost per 1M output tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      description: |-
+                                        Multiplier applied to the whole request for a service tier.
+                                        The default factor is 1.0 when no tier matches.
+                                      items:
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
+                                        properties:
+                                          factor:
+                                            description: Multiplier applied to the
+                                              whole request for this service tier.
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            description: |-
+                                              Matched case-insensitively as a substring of the vendor's reported service
+                                              tier (e.g.
+                                              "priority", "flex", "throughput").
+                                              When more than one entry matches, the longest (most specific) tier wins;
+                                              array order does not matter.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      description: |-
+                                        Controls randomness in the model output.
+                                        Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      description: |-
+                                        Limits the number of highest-probability tokens considered during
+                                        generation.
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      description: |-
+                                        Nucleus sampling probability mass.
+                                        Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
                                   type: object
                                 mistral:
                                   description: Mistral configuration.
@@ -5671,6 +6553,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -5915,6 +6810,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -6157,6 +7065,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -6447,6 +7368,274 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
+                                togetherai:
+                                  description: Togetherai configuration.
+                                  properties:
+                                    cacheReadCost:
+                                      description: Cost per 1M cache-read (cached)
+                                        prompt tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      description: |-
+                                        Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+                                        tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      description: Cost per 1M cache-write prompt
+                                        tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      description: |-
+                                        Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+                                        Configure this when the upstream provider charges differently for different
+                                        cache TTLs.
+                                      items:
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M cache-write prompt
+                                              tokens for this TTL.
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            description: Cache TTL this price applies
+                                              to, e.g. "5m" or "1h".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      description: |-
+                                        Above an input-token threshold, scale input and output pricing by the
+                                        corresponding factor.
+                                      items:
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
+                                        properties:
+                                          above:
+                                            description: Input-token threshold above
+                                              which the factors apply, e.g. "128k"
+                                              or "1m".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            description: Multiplier applied to input
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            description: Multiplier applied to output
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      description: The number of dimensions for embedding
+                                        outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      description: |-
+                                        Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      description: The maximum number of tokens to
+                                        generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      description: |-
+                                        Per-modality override of `output_cost`, in cost per 1M output tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      description: |-
+                                        Multiplier applied to the whole request for a service tier.
+                                        The default factor is 1.0 when no tier matches.
+                                      items:
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
+                                        properties:
+                                          factor:
+                                            description: Multiplier applied to the
+                                              whole request for this service tier.
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            description: |-
+                                              Matched case-insensitively as a substring of the vendor's reported service
+                                              tier (e.g.
+                                              "priority", "flex", "throughput").
+                                              When more than one entry matches, the longest (most specific) tier wins;
+                                              array order does not matter.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      description: |-
+                                        Controls randomness in the model output.
+                                        Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      description: |-
+                                        Limits the number of highest-probability tokens considered during
+                                        generation.
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      description: |-
+                                        Nucleus sampling probability mass.
+                                        Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -6465,14 +7654,17 @@ spec:
                                   - dashscope
                                   - databricks
                                   - deepseek
+                                  - fireworks
                                   - gemini
                                   - huggingface
                                   - kimi
                                   - llama2
+                                  - meta
                                   - mistral
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - togetherai
                                   - typesafe
                                   - vercel
                                   - vllm
@@ -6734,6 +7926,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -6976,6 +8181,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -7221,6 +8439,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -7489,6 +8720,7 @@ spec:
                                 description: Algorithm designates the type of configuration.
                                 enum:
                                 - consistent-hashing
+                                - intelligent
                                 - least-connections
                                 - lowest-latency
                                 - lowest-usage
@@ -7558,6 +8790,201 @@ spec:
                                     maximum: 2147483646
                                     minimum: 1
                                     type: integer
+                                type: object
+                              intelligent:
+                                description: Intelligent configuration.
+                                properties:
+                                  classifier:
+                                    description: |-
+                                      The classifier model the intelligent balancer asks what kind of work a
+                                      conversation is, before it
+                                      selects a target.
+                                      If the classifier does not answer in time or its answer cannot be used, the
+                                      balancer selects a target for general work.
+
+                                      **Requires a minimum runtime version of `2.5`**.
+                                    properties:
+                                      custom:
+                                        description: AIGatewayModelBalancerIntelligentClassifierCustom
+                                          configuration.
+                                        properties:
+                                          auth:
+                                            description: |-
+                                              The credentials sent to the classifier service with each request.
+
+                                              **Requires a minimum runtime version of `2.5`**.
+                                            properties:
+                                              basic:
+                                                description: AIGatewayModelBalancerIntelligentClassifierAuthBasic
+                                                  configuration.
+                                                properties:
+                                                  headers:
+                                                    description: The header sent with
+                                                      each request to the classifier
+                                                      service.
+                                                    items:
+                                                      description: |-
+                                                        AIGatewayModelBalancerIntelligentClassifierAuthBasicHeaders The header sent
+                                                        with each request to the classifier service.
+                                                      properties:
+                                                        name:
+                                                          description: |-
+                                                            The name of the header used for authentication.
+                                                            This field is
+                                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                                          maxLength: 253
+                                                          minLength: 1
+                                                          type: string
+                                                        value:
+                                                          description: |-
+                                                            The value of the header, for example `Bearer key...`.
+                                                            This field is
+                                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                                          maxLength: 253
+                                                          type: string
+                                                      required:
+                                                      - name
+                                                      type: object
+                                                    maxItems: 1
+                                                    type: array
+                                                type: object
+                                              type:
+                                                description: Type designates the type
+                                                  of configuration.
+                                                enum:
+                                                - basic
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                          contextWindow:
+                                            description: |-
+                                              The number of tokens the classifier model can read, from the model
+                                              provider's documentation.
+                                              The request text sent to the classifier is cut to fit.
+                                            maximum: 1048576
+                                            minimum: 4096
+                                            type: integer
+                                          format:
+                                            description: |-
+                                              The endpoint path appended to `url`: the path of the System One decisions
+                                              API.
+                                              Some hosts serve
+                                              it at another path.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          name:
+                                            description: The name of the classifier
+                                              model, sent in each request.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          timeout:
+                                            description: The time in milliseconds
+                                              to wait for the classifier's answer.
+                                            maximum: 60000
+                                            minimum: 100
+                                            type: integer
+                                          url:
+                                            description: |-
+                                              The classifier service's base URL.
+                                              The `format` path is appended to it.
+                                              It has no query string,
+                                              fragment or user info.
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^https?://[^?#@]*$
+                                            type: string
+                                        required:
+                                        - contextWindow
+                                        - name
+                                        - url
+                                        type: object
+                                      type:
+                                        description: Type designates the type of configuration.
+                                        enum:
+                                        - custom
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                  connectTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  costQualityTradeoff:
+                                    description: |-
+                                      How the balancer weighs cost versus quality when selecting a target.
+                                      `cost` favors the cheapest available target, `quality` favors the
+                                      highest-quality target, and `balanced` weighs both.
+                                    enum:
+                                    - balanced
+                                    - cost
+                                    - quality
+                                    maxLength: 253
+                                    type: string
+                                  failTimeout:
+                                    description: |-
+                                      The period of time (in milliseconds) the target will be considered
+                                      unavailable after the number of unsuccessful attempts reaches `max_fails`.
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  failoverCriteria:
+                                    description: |-
+                                      Specifies in which cases an upstream response should be failover to the next
+                                      target.
+                                      Each option in the array is equivalent to the function of
+                                      https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream
+                                    items:
+                                      type: string
+                                    type: array
+                                  maxFails:
+                                    description: |-
+                                      Number of unsuccessful attempts to communicate with a target that should
+                                      occur in the duration defined by `fail_timeout` before the target is
+                                      considered unavailable.
+                                      The zero value disables the circuit breaker.
+                                      What is considered an unsuccessful attempt is defined by
+                                      `failover_criteria`.
+                                      Note the cases of `error`, `timeout` and `invalid_header` are always
+                                      considered unsuccessful attempts, while the cases of `http_403` and
+                                      `http_404` are never considered unsuccessful attempts.
+                                    maximum: 32767
+                                    minimum: 0
+                                    type: integer
+                                  readTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  retries:
+                                    description: The number of retries to execute
+                                      upon failure to proxy.
+                                    maximum: 32767
+                                    minimum: 0
+                                    type: integer
+                                  slots:
+                                    description: The number of slots in the load balancer
+                                      algorithm.
+                                    maximum: 65536
+                                    minimum: 10
+                                    type: integer
+                                  version:
+                                    description: The version of the intelligent balancing
+                                      algorithm.
+                                    enum:
+                                    - v1
+                                    maxLength: 253
+                                    type: string
+                                  writeTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                required:
+                                - classifier
                                 type: object
                               least-connections:
                                 description: LeastConnections configuration.
@@ -8813,9 +10240,15 @@ spec:
                                 type: string
                             type: object
                           maxRequestBodySize:
-                            description: Maximum size of request body to parse. Set
-                              to 0 for unlimited.
-                            maximum: 2147483646
+                            description: |-
+                              The maximum size, in bytes, of a request body that the gateway reads and
+                              sends to the model.
+                              A request with a larger body fails. Set to 0 for no limit.
+                              If you do not set a value, the gateway uses the request size limit that the
+                              model's providers publish,
+                              with defaults to 8 MB.
+                              If the targets use more than one provider, the gateway uses the highest of
+                              these limits.
                             minimum: 0
                             type: integer
                           model:
@@ -9105,7 +10538,8 @@ spec:
                         - route
                         type: object
                       datastores:
-                        description: Names of the Datastores this model references.
+                        description: The Datastores this model references, with the
+                          feature that uses each one.
                         items:
                           description: |-
                             AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
@@ -9499,6 +10933,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -9769,6 +11216,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -10011,6 +11471,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -10294,6 +11767,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -10550,6 +12036,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -10812,6 +12311,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -11068,6 +12580,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -11310,6 +12835,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -11560,6 +13098,274 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
+                                fireworks:
+                                  description: Fireworks configuration.
+                                  properties:
+                                    cacheReadCost:
+                                      description: Cost per 1M cache-read (cached)
+                                        prompt tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      description: |-
+                                        Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+                                        tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      description: Cost per 1M cache-write prompt
+                                        tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      description: |-
+                                        Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+                                        Configure this when the upstream provider charges differently for different
+                                        cache TTLs.
+                                      items:
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M cache-write prompt
+                                              tokens for this TTL.
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            description: Cache TTL this price applies
+                                              to, e.g. "5m" or "1h".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      description: |-
+                                        Above an input-token threshold, scale input and output pricing by the
+                                        corresponding factor.
+                                      items:
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
+                                        properties:
+                                          above:
+                                            description: Input-token threshold above
+                                              which the factors apply, e.g. "128k"
+                                              or "1m".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            description: Multiplier applied to input
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            description: Multiplier applied to output
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      description: The number of dimensions for embedding
+                                        outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      description: |-
+                                        Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      description: The maximum number of tokens to
+                                        generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      description: |-
+                                        Per-modality override of `output_cost`, in cost per 1M output tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      description: |-
+                                        Multiplier applied to the whole request for a service tier.
+                                        The default factor is 1.0 when no tier matches.
+                                      items:
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
+                                        properties:
+                                          factor:
+                                            description: Multiplier applied to the
+                                              whole request for this service tier.
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            description: |-
+                                              Matched case-insensitively as a substring of the vendor's reported service
+                                              tier (e.g.
+                                              "priority", "flex", "throughput").
+                                              When more than one entry matches, the longest (most specific) tier wins;
+                                              array order does not matter.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      description: |-
+                                        Controls randomness in the model output.
+                                        Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      description: |-
+                                        Limits the number of highest-probability tokens considered during
+                                        generation.
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      description: |-
+                                        Nucleus sampling probability mass.
+                                        Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -11829,6 +13635,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -12071,6 +13890,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -12335,6 +14167,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -12587,6 +14432,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -12596,6 +14454,261 @@ spec:
                                   required:
                                   - format
                                   - upstreamURL
+                                  type: object
+                                meta:
+                                  description: Meta configuration.
+                                  properties:
+                                    cacheReadCost:
+                                      description: Cost per 1M cache-read (cached)
+                                        prompt tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      description: |-
+                                        Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+                                        tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      description: Cost per 1M cache-write prompt
+                                        tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      description: |-
+                                        Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+                                        Configure this when the upstream provider charges differently for different
+                                        cache TTLs.
+                                      items:
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M cache-write prompt
+                                              tokens for this TTL.
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            description: Cache TTL this price applies
+                                              to, e.g. "5m" or "1h".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      description: |-
+                                        Above an input-token threshold, scale input and output pricing by the
+                                        corresponding factor.
+                                      items:
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
+                                        properties:
+                                          above:
+                                            description: Input-token threshold above
+                                              which the factors apply, e.g. "128k"
+                                              or "1m".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            description: Multiplier applied to input
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            description: Multiplier applied to output
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      description: The number of dimensions for embedding
+                                        outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      description: |-
+                                        Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      description: The maximum number of tokens to
+                                        generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      description: |-
+                                        Per-modality override of `output_cost`, in cost per 1M output tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      description: |-
+                                        Multiplier applied to the whole request for a service tier.
+                                        The default factor is 1.0 when no tier matches.
+                                      items:
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
+                                        properties:
+                                          factor:
+                                            description: Multiplier applied to the
+                                              whole request for this service tier.
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            description: |-
+                                              Matched case-insensitively as a substring of the vendor's reported service
+                                              tier (e.g.
+                                              "priority", "flex", "throughput").
+                                              When more than one entry matches, the longest (most specific) tier wins;
+                                              array order does not matter.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      description: |-
+                                        Controls randomness in the model output.
+                                        Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      description: |-
+                                        Limits the number of highest-probability tokens considered during
+                                        generation.
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      description: |-
+                                        Nucleus sampling probability mass.
+                                        Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
                                   type: object
                                 mistral:
                                   description: Mistral configuration.
@@ -12842,6 +14955,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -13086,6 +15212,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -13328,6 +15467,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -13618,6 +15770,274 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
+                                togetherai:
+                                  description: Togetherai configuration.
+                                  properties:
+                                    cacheReadCost:
+                                      description: Cost per 1M cache-read (cached)
+                                        prompt tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      description: |-
+                                        Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+                                        tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      description: Cost per 1M cache-write prompt
+                                        tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      description: |-
+                                        Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+                                        Configure this when the upstream provider charges differently for different
+                                        cache TTLs.
+                                      items:
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M cache-write prompt
+                                              tokens for this TTL.
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            description: Cache TTL this price applies
+                                              to, e.g. "5m" or "1h".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      description: |-
+                                        Above an input-token threshold, scale input and output pricing by the
+                                        corresponding factor.
+                                      items:
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
+                                        properties:
+                                          above:
+                                            description: Input-token threshold above
+                                              which the factors apply, e.g. "128k"
+                                              or "1m".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            description: Multiplier applied to input
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            description: Multiplier applied to output
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      description: The number of dimensions for embedding
+                                        outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      description: |-
+                                        Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      description: The maximum number of tokens to
+                                        generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      description: |-
+                                        Per-modality override of `output_cost`, in cost per 1M output tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      description: |-
+                                        Multiplier applied to the whole request for a service tier.
+                                        The default factor is 1.0 when no tier matches.
+                                      items:
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
+                                        properties:
+                                          factor:
+                                            description: Multiplier applied to the
+                                              whole request for this service tier.
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            description: |-
+                                              Matched case-insensitively as a substring of the vendor's reported service
+                                              tier (e.g.
+                                              "priority", "flex", "throughput").
+                                              When more than one entry matches, the longest (most specific) tier wins;
+                                              array order does not matter.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      description: |-
+                                        Controls randomness in the model output.
+                                        Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      description: |-
+                                        Limits the number of highest-probability tokens considered during
+                                        generation.
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      description: |-
+                                        Nucleus sampling probability mass.
+                                        Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -13636,14 +16056,17 @@ spec:
                                   - dashscope
                                   - databricks
                                   - deepseek
+                                  - fireworks
                                   - gemini
                                   - huggingface
                                   - kimi
                                   - llama2
+                                  - meta
                                   - mistral
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - togetherai
                                   - typesafe
                                   - vercel
                                   - vllm
@@ -13905,6 +16328,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -14147,6 +16583,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.
@@ -14392,6 +16841,19 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      description: |-
+                                        Base URL used instead of the provider's default upstream endpoint, for
+                                        regional or private endpoints.
+                                        It overrides only the scheme, host, and base path; the gateway appends the
+                                        path of each capability the target serves, so a single target can serve
+                                        several capabilities from the same base.
+                                        Mutually exclusive with `upstream_url`, which replaces the full URL.
+                                        Providers without a default upstream URL ignore it.
+
+                                        **Requires a minimum runtime version of `2.4`**.
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       description: The upstream URL for the model
                                         endpoint.

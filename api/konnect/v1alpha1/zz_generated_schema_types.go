@@ -13,6 +13,10 @@ import (
 //
 // Data planes older than this version still connect for topology visibility.
 //
+// Can only be set when deployment_type is `hybrid`.
+// For `managed` and `serverless` deployments, Konnect manages this value and it
+// is read-only.
+//
 // When not specified, the latest generally available runtime version is used.
 //
 // When runtime_auto_upgrade is enabled (the default), this value is raised
@@ -45,6 +49,10 @@ type AIGatewayProxyURL struct {
 // raise min_runtime_version to match the DP fleet's minimum runtime version
 // (the lowest AI Gateway runtime version reported across all connected data
 // planes) as that value increases.
+//
+// Can only be set when deployment_type is `hybrid`.
+// For `managed` and `serverless` deployments, Konnect manages runtime upgrades
+// and this value is read-only.
 //
 // +kubebuilder:validation:Enum=Enabled;Disabled
 type AIGatewayRuntimeAutoUpgrade string
@@ -108,6 +116,46 @@ type AISettingsFeaturesMcpServer struct {
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	WriteOperationsEnabled string `json:"writeOperationsEnabled,omitzero"`
 }
+
+// CreateOIDCIdentityProviderConfig The configuration data for creating an OIDC
+// authentication integration.
+type CreateOIDCIdentityProviderConfig struct {
+	// Defines the mappings between OpenID Connect (OIDC) claims and local claims
+	// used by your application for
+	// authentication.
+	//
+	//
+	// +optional
+	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claimMappings,omitzero"`
+	// The client ID assigned to your application by the identity provider.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ClientID OIDCIdentityProviderClientID `json:"clientID,omitzero"`
+	// The Client Secret assigned to your application by the identity provider.
+	//
+	// +required
+	ClientSecret SensitiveDataSource `json:"clientSecret,omitzero"`
+	// The issuer URI of the identity provider.
+	// This is the URL where the provider's metadata can be obtained.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	IssuerURL OIDCIdentityProviderIssuer `json:"issuerURL,omitzero"`
+	// The scopes requested by your application when authenticating with the
+	// identity provider.
+	// Must include `openid`.
+	//
+	// +optional
+	Scopes CreateOIDCIdentityProviderScopes `json:"scopes,omitzero"`
+}
+
+// CreateOIDCIdentityProviderScopes The scopes requested by your application
+// when authenticating with the identity provider.
+// Must include `openid`.
+type CreateOIDCIdentityProviderScopes []string
 
 // CreatePortalCustomDomainSSL is a type alias.
 type CreatePortalCustomDomainSSL = apiextensionsv1.JSON
@@ -297,6 +345,10 @@ type PageTitle string
 // used.
 type PageVisibilityStatus string
 
+// PortalCreateIdentityProviderConfig The configuration data for creating an
+// authentication integration.
+type PortalCreateIdentityProviderConfig map[string]string
+
 // PortalFooterMenuSection is a type alias.
 type PortalFooterMenuSection struct {
 	//
@@ -338,41 +390,6 @@ type PortalMenuItem struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
 	Visibility string `json:"visibility,omitzero"`
-}
-
-// PortalOIDCIdentityProviderConfig The identity provider that contains
-// configuration data for the OIDC authentication integration.
-type PortalOIDCIdentityProviderConfig struct {
-	// Defines the mappings between OpenID Connect (OIDC) claims and local claims
-	// used by your application for
-	// authentication.
-	//
-	//
-	// +optional
-	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claimMappings,omitzero"`
-	// The client ID assigned to your application by the identity provider.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ClientID OIDCIdentityProviderClientID `json:"clientID,omitzero"`
-	// The Client Secret assigned to your application by the identity provider.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	ClientSecret OIDCIdentityProviderClientSecret `json:"clientSecret,omitzero"`
-	// The issuer URI of the identity provider.
-	// This is the URL where the provider's metadata can be obtained.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	IssuerURL OIDCIdentityProviderIssuer `json:"issuerURL,omitzero"`
-	// The scopes requested by your application when authenticating with the
-	// identity provider.
-	//
-	// +optional
-	Scopes []string `json:"scopes,omitempty"`
 }
 
 // PortalSAMLIdentityProviderConfig The identity provider that contains

@@ -31,7 +31,23 @@ type APIGroupVersionConfig struct {
 	// the marker.
 	Categories []string `yaml:"categories,omitempty"`
 
+	// Validation opts into OAS validations not emitted by default.
+	Validation ValidationConfig `yaml:"validation,omitempty"`
+
 	Types []*TypeConfig `yaml:"types"`
+}
+
+// ValidationConfig selects OAS validations emitted on top of the default ones.
+type ValidationConfig struct {
+	// ArrayConstraints emits minItems, item constraints, and the enum and
+	// item counts of named types.
+	ArrayConstraints bool `yaml:"arrayConstraints,omitempty"`
+	// UnicodePatterns emits x-unicode-pattern as the pattern of a string that
+	// has no plain one.
+	UnicodePatterns bool `yaml:"unicodePatterns,omitempty"`
+	// InlineSensitiveValueLength emits the minLength of a sensitive value as a
+	// rule on its inline form; a Secret's value can't be checked at admission.
+	InlineSensitiveValueLength bool `yaml:"inlineSensitiveValueLength,omitempty"`
 }
 
 // CommonTypesConfig holds configuration for common types that can be shared
@@ -1269,6 +1285,11 @@ type FieldConfig struct {
 	// field's Go type. Use it for optional collections whose explicitly empty
 	// value must reach the API instead of being dropped by `omitempty`.
 	OmitZero bool `yaml:"_omitZero,omitempty"`
+	// AllowZero emits an optional scalar (string, integer or number) field as
+	// a pointer with `json:",omitempty"`. Use it when the zero value means
+	// something to the API, e.g. "0 for unlimited": a plain value with
+	// `omitzero` can't tell an explicit zero from an unset field and drops it.
+	AllowZero bool `yaml:"_allowZero,omitempty"`
 	// Fields maps child field names to their own FieldConfig, allowing
 	// multi-segment CEL paths that traverse referenced schema types.
 	Fields map[string]*FieldConfig `yaml:",inline"`

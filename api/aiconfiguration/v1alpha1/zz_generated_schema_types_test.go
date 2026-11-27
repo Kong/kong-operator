@@ -7,32 +7,6 @@ import (
 	"testing"
 )
 
-func TestAIGWKeyAuthGeneratedConfig_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGWKeyAuthGeneratedConfig
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGWOpenIDConnectGeneratedConfig_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGWOpenIDConnectGeneratedConfig
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
 func TestAIGatewayAgentAccess_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -267,6 +241,58 @@ func TestAIGatewayMCPPassthroughTool_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayMCPPrompt_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPPrompt
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPPromptAccess_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPPromptAccess
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPResource_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPResource
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPResourceAccess_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPResourceAccess
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayMCPServerCacheHint_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -414,6 +440,19 @@ func TestAIGatewayMCPServerServerConfigBase_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayMCPServerServerConfigBase
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerUpstreamConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -635,6 +674,45 @@ func TestAIGatewayModelBalancerConsistentHashingConfig_MarshalEmpty(t *testing.T
 	t.Parallel()
 
 	var spec AIGatewayModelBalancerConsistentHashingConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayModelBalancerIntelligentClassifierAuthBasic_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelBalancerIntelligentClassifierAuthBasic
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayModelBalancerIntelligentClassifierCustom_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelBalancerIntelligentClassifierCustom
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayModelBalancerIntelligentConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelBalancerIntelligentConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -943,6 +1021,19 @@ func TestAIGatewayModelProviderDeepseek_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayModelProviderFireworks_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelProviderFireworks
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayModelProviderGemini_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -995,6 +1086,19 @@ func TestAIGatewayModelProviderLlama2_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayModelProviderMeta_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelProviderMeta
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayModelProviderMistral_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1038,6 +1142,19 @@ func TestAIGatewayModelProviderSagemaker_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayModelProviderSagemaker
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayModelProviderTogetherai_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelProviderTogetherai
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1398,6 +1515,19 @@ func TestAIGatewayTargetDeepseekConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayTargetFireworksConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayTargetFireworksConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayTargetGeminiConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1450,6 +1580,19 @@ func TestAIGatewayTargetLlama2Config_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayTargetMetaConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayTargetMetaConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayTargetMistralConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1493,6 +1636,19 @@ func TestAIGatewayTargetSagemakerConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayTargetSagemakerConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayTargetTogetheraiConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayTargetTogetheraiConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1619,10 +1775,75 @@ func TestAIGatewayUpstreamAuthAWS_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayUpstreamBalancerConsistentHashingConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayUpstreamBalancerConsistentHashingConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayUpstreamBalancerLeastConnectionsConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayUpstreamBalancerLeastConnectionsConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayUpstreamBalancerLowestLatencyConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayUpstreamBalancerLowestLatencyConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayUpstreamBalancerRoundRobinConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayUpstreamBalancerRoundRobinConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayUpstreamConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayUpstreamConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayUpstreamTarget_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayUpstreamTarget
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -2242,6 +2463,63 @@ func TestAIGatewayMCPServerPassthroughListenerAccessUnmarshalJSON_NilReceiver(t 
 	}
 }
 
+func TestAIGatewayMCPServerUpstreamConfigAuthUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "aws", payload: []byte("{\"type\":\"aws\",\"aws\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerUpstreamConfigAuth
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerUpstreamConfigAuth: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServerConfigBalancerUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "consistent-hashing", payload: []byte("{\"algorithm\":\"consistent-hashing\",\"consistent-hashing\":{}}")},
+		{name: "least-connections", payload: []byte("{\"algorithm\":\"least-connections\",\"least-connections\":{}}")},
+		{name: "lowest-latency", payload: []byte("{\"algorithm\":\"lowest-latency\",\"lowest-latency\":{}}")},
+		{name: "round-robin", payload: []byte("{\"algorithm\":\"round-robin\",\"round-robin\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerUpstreamServerConfigBalancer
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerUpstreamServerConfigBalancer: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestAIGatewayMCPServerUpstreamServerServerConfigToolsListAuthUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -2298,6 +2576,36 @@ func TestAIGatewayMCPServerUpstreamServerServerToolAuthConfigUnmarshalJSON_NilRe
 	}
 }
 
+func TestAIGatewayMCPServerWithUpstreamConfigBalancerUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "consistent-hashing", payload: []byte("{\"algorithm\":\"consistent-hashing\",\"consistent-hashing\":{}}")},
+		{name: "least-connections", payload: []byte("{\"algorithm\":\"least-connections\",\"least-connections\":{}}")},
+		{name: "lowest-latency", payload: []byte("{\"algorithm\":\"lowest-latency\",\"lowest-latency\":{}}")},
+		{name: "round-robin", payload: []byte("{\"algorithm\":\"round-robin\",\"round-robin\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerWithUpstreamConfigBalancer
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerWithUpstreamConfigBalancer: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestAIGatewayModelAPIConfigBalancerUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -2306,6 +2614,7 @@ func TestAIGatewayModelAPIConfigBalancerUnmarshalJSON_NilReceiver(t *testing.T) 
 		payload []byte
 	}{
 		{name: "consistent-hashing", payload: []byte("{\"algorithm\":\"consistent-hashing\",\"consistent-hashing\":{}}")},
+		{name: "intelligent", payload: []byte("{\"algorithm\":\"intelligent\",\"intelligent\":{}}")},
 		{name: "least-connections", payload: []byte("{\"algorithm\":\"least-connections\",\"least-connections\":{}}")},
 		{name: "lowest-latency", payload: []byte("{\"algorithm\":\"lowest-latency\",\"lowest-latency\":{}}")},
 		{name: "lowest-usage", payload: []byte("{\"algorithm\":\"lowest-usage\",\"lowest-usage\":{}}")},
@@ -2369,6 +2678,7 @@ func TestAIGatewayModelBalancerConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 		payload []byte
 	}{
 		{name: "consistent-hashing", payload: []byte("{\"algorithm\":\"consistent-hashing\",\"consistent-hashing\":{}}")},
+		{name: "intelligent", payload: []byte("{\"algorithm\":\"intelligent\",\"intelligent\":{}}")},
 		{name: "least-connections", payload: []byte("{\"algorithm\":\"least-connections\",\"least-connections\":{}}")},
 		{name: "lowest-latency", payload: []byte("{\"algorithm\":\"lowest-latency\",\"lowest-latency\":{}}")},
 		{name: "lowest-usage", payload: []byte("{\"algorithm\":\"lowest-usage\",\"lowest-usage\":{}}")},
@@ -2388,6 +2698,114 @@ func TestAIGatewayModelBalancerConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling AIGatewayModelBalancerConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayModelBalancerIntelligentClassifierUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "custom", payload: []byte("{\"type\":\"custom\",\"custom\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayModelBalancerIntelligentClassifier
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayModelBalancerIntelligentClassifier: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayModelBalancerIntelligentClassifierAuthUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "basic", payload: []byte("{\"type\":\"basic\",\"basic\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayModelBalancerIntelligentClassifierAuth
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayModelBalancerIntelligentClassifierAuth: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayModelBalancerIntelligentClassifierCustomAuthUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "basic", payload: []byte("{\"type\":\"basic\",\"basic\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayModelBalancerIntelligentClassifierCustomAuth
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayModelBalancerIntelligentClassifierCustomAuth: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayModelBalancerIntelligentConfigClassifierUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "custom", payload: []byte("{\"type\":\"custom\",\"custom\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayModelBalancerIntelligentConfigClassifier
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayModelBalancerIntelligentConfigClassifier: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -2430,6 +2848,7 @@ func TestAIGatewayModelModelConfigBalancerUnmarshalJSON_NilReceiver(t *testing.T
 		payload []byte
 	}{
 		{name: "consistent-hashing", payload: []byte("{\"algorithm\":\"consistent-hashing\",\"consistent-hashing\":{}}")},
+		{name: "intelligent", payload: []byte("{\"algorithm\":\"intelligent\",\"intelligent\":{}}")},
 		{name: "least-connections", payload: []byte("{\"algorithm\":\"least-connections\",\"least-connections\":{}}")},
 		{name: "lowest-latency", payload: []byte("{\"algorithm\":\"lowest-latency\",\"lowest-latency\":{}}")},
 		{name: "lowest-usage", payload: []byte("{\"algorithm\":\"lowest-usage\",\"lowest-usage\":{}}")},
@@ -2640,14 +3059,17 @@ func TestAIGatewayTargetConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 		{name: "dashscope", payload: []byte("{\"type\":\"dashscope\",\"dashscope\":{}}")},
 		{name: "databricks", payload: []byte("{\"type\":\"databricks\",\"databricks\":{}}")},
 		{name: "deepseek", payload: []byte("{\"type\":\"deepseek\",\"deepseek\":{}}")},
+		{name: "fireworks", payload: []byte("{\"type\":\"fireworks\",\"fireworks\":{}}")},
 		{name: "gemini", payload: []byte("{\"type\":\"gemini\",\"gemini\":{}}")},
 		{name: "huggingface", payload: []byte("{\"type\":\"huggingface\",\"huggingface\":{}}")},
 		{name: "kimi", payload: []byte("{\"type\":\"kimi\",\"kimi\":{}}")},
 		{name: "llama2", payload: []byte("{\"type\":\"llama2\",\"llama2\":{}}")},
+		{name: "meta", payload: []byte("{\"type\":\"meta\",\"meta\":{}}")},
 		{name: "mistral", payload: []byte("{\"type\":\"mistral\",\"mistral\":{}}")},
 		{name: "ollama", payload: []byte("{\"type\":\"ollama\",\"ollama\":{}}")},
 		{name: "openai", payload: []byte("{\"type\":\"openai\",\"openai\":{}}")},
 		{name: "sagemaker", payload: []byte("{\"type\":\"sagemaker\",\"sagemaker\":{}}")},
+		{name: "togetherai", payload: []byte("{\"type\":\"togetherai\",\"togetherai\":{}}")},
 		{name: "typesafe", payload: []byte("{\"type\":\"typesafe\",\"typesafe\":{}}")},
 		{name: "vercel", payload: []byte("{\"type\":\"vercel\",\"vercel\":{}}")},
 		{name: "vllm", payload: []byte("{\"type\":\"vllm\",\"vllm\":{}}")},
@@ -2665,6 +3087,36 @@ func TestAIGatewayTargetConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling AIGatewayTargetConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayUpstreamBalancerConfigUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "consistent-hashing", payload: []byte("{\"algorithm\":\"consistent-hashing\",\"consistent-hashing\":{}}")},
+		{name: "least-connections", payload: []byte("{\"algorithm\":\"least-connections\",\"least-connections\":{}}")},
+		{name: "lowest-latency", payload: []byte("{\"algorithm\":\"lowest-latency\",\"lowest-latency\":{}}")},
+		{name: "round-robin", payload: []byte("{\"algorithm\":\"round-robin\",\"round-robin\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayUpstreamBalancerConfig
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayUpstreamBalancerConfig: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -3249,6 +3701,134 @@ func TestAIGatewayMCPServerPassthroughListenerUnmarshalJSON_DecodesUnionFields(t
 	}
 }
 
+func TestAIGatewayMCPServerUpstreamConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, AIGatewayMCPServerUpstreamConfig)
+	}{
+		{
+			name:    "Auth/aws",
+			payload: []byte("{\"auth\":{\"type\":\"aws\",\"aws\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamConfig) {
+				t.Helper()
+				if target.Auth == nil {
+					t.Fatalf("Auth should be allocated")
+				}
+				if got, want := target.Auth.Type, AIGatewayMCPServerUpstreamConfigAuthTypeAIGatewayUpstreamAuthAWS; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Auth.AIGatewayUpstreamAuthAWS == nil {
+					t.Fatalf("Auth.AIGatewayUpstreamAuthAWS should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayMCPServerUpstreamConfig
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServerConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, AIGatewayMCPServerUpstreamServerConfig)
+	}{
+		{
+			name:    "Balancer/consistent-hashing",
+			payload: []byte("{\"balancer\":{\"algorithm\":\"consistent-hashing\",\"consistent-hashing\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServerConfig) {
+				t.Helper()
+				if target.Balancer == nil {
+					t.Fatalf("Balancer should be allocated")
+				}
+				if got, want := target.Balancer.Algorithm, AIGatewayMCPServerUpstreamServerConfigBalancerTypeConsistentHashing; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Balancer.ConsistentHashing == nil {
+					t.Fatalf("Balancer.ConsistentHashing should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Balancer/least-connections",
+			payload: []byte("{\"balancer\":{\"algorithm\":\"least-connections\",\"least-connections\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServerConfig) {
+				t.Helper()
+				if target.Balancer == nil {
+					t.Fatalf("Balancer should be allocated")
+				}
+				if got, want := target.Balancer.Algorithm, AIGatewayMCPServerUpstreamServerConfigBalancerTypeLeastConnections; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Balancer.LeastConnections == nil {
+					t.Fatalf("Balancer.LeastConnections should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Balancer/lowest-latency",
+			payload: []byte("{\"balancer\":{\"algorithm\":\"lowest-latency\",\"lowest-latency\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServerConfig) {
+				t.Helper()
+				if target.Balancer == nil {
+					t.Fatalf("Balancer should be allocated")
+				}
+				if got, want := target.Balancer.Algorithm, AIGatewayMCPServerUpstreamServerConfigBalancerTypeLowestLatency; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Balancer.LowestLatency == nil {
+					t.Fatalf("Balancer.LowestLatency should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Balancer/round-robin",
+			payload: []byte("{\"balancer\":{\"algorithm\":\"round-robin\",\"round-robin\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServerConfig) {
+				t.Helper()
+				if target.Balancer == nil {
+					t.Fatalf("Balancer should be allocated")
+				}
+				if got, want := target.Balancer.Algorithm, AIGatewayMCPServerUpstreamServerConfigBalancerTypeRoundRobin; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Balancer.RoundRobin == nil {
+					t.Fatalf("Balancer.RoundRobin should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayMCPServerUpstreamServerConfig
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
 func TestAIGatewayMCPServerUpstreamServerServerConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	t.Parallel()
 
@@ -3305,6 +3885,94 @@ func TestAIGatewayMCPServerUpstreamServerServerConfigUnmarshalJSON_DecodesUnionF
 	}
 }
 
+func TestAIGatewayMCPServerWithUpstreamConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, AIGatewayMCPServerWithUpstreamConfig)
+	}{
+		{
+			name:    "Balancer/consistent-hashing",
+			payload: []byte("{\"balancer\":{\"algorithm\":\"consistent-hashing\",\"consistent-hashing\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerWithUpstreamConfig) {
+				t.Helper()
+				if target.Balancer == nil {
+					t.Fatalf("Balancer should be allocated")
+				}
+				if got, want := target.Balancer.Algorithm, AIGatewayMCPServerWithUpstreamConfigBalancerTypeConsistentHashing; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Balancer.ConsistentHashing == nil {
+					t.Fatalf("Balancer.ConsistentHashing should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Balancer/least-connections",
+			payload: []byte("{\"balancer\":{\"algorithm\":\"least-connections\",\"least-connections\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerWithUpstreamConfig) {
+				t.Helper()
+				if target.Balancer == nil {
+					t.Fatalf("Balancer should be allocated")
+				}
+				if got, want := target.Balancer.Algorithm, AIGatewayMCPServerWithUpstreamConfigBalancerTypeLeastConnections; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Balancer.LeastConnections == nil {
+					t.Fatalf("Balancer.LeastConnections should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Balancer/lowest-latency",
+			payload: []byte("{\"balancer\":{\"algorithm\":\"lowest-latency\",\"lowest-latency\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerWithUpstreamConfig) {
+				t.Helper()
+				if target.Balancer == nil {
+					t.Fatalf("Balancer should be allocated")
+				}
+				if got, want := target.Balancer.Algorithm, AIGatewayMCPServerWithUpstreamConfigBalancerTypeLowestLatency; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Balancer.LowestLatency == nil {
+					t.Fatalf("Balancer.LowestLatency should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Balancer/round-robin",
+			payload: []byte("{\"balancer\":{\"algorithm\":\"round-robin\",\"round-robin\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerWithUpstreamConfig) {
+				t.Helper()
+				if target.Balancer == nil {
+					t.Fatalf("Balancer should be allocated")
+				}
+				if got, want := target.Balancer.Algorithm, AIGatewayMCPServerWithUpstreamConfigBalancerTypeRoundRobin; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Balancer.RoundRobin == nil {
+					t.Fatalf("Balancer.RoundRobin should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayMCPServerWithUpstreamConfig
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
 func TestAIGatewayModelAPIConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	t.Parallel()
 
@@ -3326,6 +3994,22 @@ func TestAIGatewayModelAPIConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 				}
 				if target.Balancer.ConsistentHashing == nil {
 					t.Fatalf("Balancer.ConsistentHashing should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Balancer/intelligent",
+			payload: []byte("{\"balancer\":{\"algorithm\":\"intelligent\",\"intelligent\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayModelAPIConfig) {
+				t.Helper()
+				if target.Balancer == nil {
+					t.Fatalf("Balancer should be allocated")
+				}
+				if got, want := target.Balancer.Algorithm, AIGatewayModelAPIConfigBalancerTypeIntelligent; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Balancer.Intelligent == nil {
+					t.Fatalf("Balancer.Intelligent should be allocated")
 				}
 			},
 		},
@@ -3529,6 +4213,86 @@ func TestAIGatewayModelAccessUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	}
 }
 
+func TestAIGatewayModelBalancerIntelligentClassifierCustomUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, AIGatewayModelBalancerIntelligentClassifierCustom)
+	}{
+		{
+			name:    "Auth/basic",
+			payload: []byte("{\"auth\":{\"type\":\"basic\",\"basic\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayModelBalancerIntelligentClassifierCustom) {
+				t.Helper()
+				if target.Auth == nil {
+					t.Fatalf("Auth should be allocated")
+				}
+				if got, want := target.Auth.Type, AIGatewayModelBalancerIntelligentClassifierCustomAuthTypeAIGatewayModelBalancerIntelligentClassifierAuthBasic; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Auth.AIGatewayModelBalancerIntelligentClassifierAuthBasic == nil {
+					t.Fatalf("Auth.AIGatewayModelBalancerIntelligentClassifierAuthBasic should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayModelBalancerIntelligentClassifierCustom
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayModelBalancerIntelligentConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, AIGatewayModelBalancerIntelligentConfig)
+	}{
+		{
+			name:    "Classifier/custom",
+			payload: []byte("{\"classifier\":{\"type\":\"custom\",\"custom\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayModelBalancerIntelligentConfig) {
+				t.Helper()
+				if target.Classifier == nil {
+					t.Fatalf("Classifier should be allocated")
+				}
+				if got, want := target.Classifier.Type, AIGatewayModelBalancerIntelligentConfigClassifierTypeAIGatewayModelBalancerIntelligentClassifierCustom; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Classifier.AIGatewayModelBalancerIntelligentClassifierCustom == nil {
+					t.Fatalf("Classifier.AIGatewayModelBalancerIntelligentClassifierCustom should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayModelBalancerIntelligentConfig
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
 func TestAIGatewayModelBalancerSemanticConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	t.Parallel()
 
@@ -3606,6 +4370,22 @@ func TestAIGatewayModelModelConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 				}
 				if target.Balancer.ConsistentHashing == nil {
 					t.Fatalf("Balancer.ConsistentHashing should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Balancer/intelligent",
+			payload: []byte("{\"balancer\":{\"algorithm\":\"intelligent\",\"intelligent\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayModelModelConfig) {
+				t.Helper()
+				if target.Balancer == nil {
+					t.Fatalf("Balancer should be allocated")
+				}
+				if got, want := target.Balancer.Algorithm, AIGatewayModelModelConfigBalancerTypeIntelligent; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Balancer.Intelligent == nil {
+					t.Fatalf("Balancer.Intelligent should be allocated")
 				}
 			},
 		},
@@ -4122,6 +4902,22 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
+			name:    "Config/fireworks",
+			payload: []byte("{\"config\":{\"type\":\"fireworks\",\"fireworks\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayTarget) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.Type, AIGatewayTargetConfigTypeFireworks; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Fireworks == nil {
+					t.Fatalf("Config.Fireworks should be allocated")
+				}
+			},
+		},
+		{
 			name:    "Config/gemini",
 			payload: []byte("{\"config\":{\"type\":\"gemini\",\"gemini\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
@@ -4186,6 +4982,22 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
+			name:    "Config/meta",
+			payload: []byte("{\"config\":{\"type\":\"meta\",\"meta\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayTarget) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.Type, AIGatewayTargetConfigTypeMeta; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Meta == nil {
+					t.Fatalf("Config.Meta should be allocated")
+				}
+			},
+		},
+		{
 			name:    "Config/mistral",
 			payload: []byte("{\"config\":{\"type\":\"mistral\",\"mistral\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
@@ -4246,6 +5058,22 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 				}
 				if target.Config.Sagemaker == nil {
 					t.Fatalf("Config.Sagemaker should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/togetherai",
+			payload: []byte("{\"config\":{\"type\":\"togetherai\",\"togetherai\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayTarget) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.Type, AIGatewayTargetConfigTypeTogetherai; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Togetherai == nil {
+					t.Fatalf("Config.Togetherai should be allocated")
 				}
 			},
 		},

@@ -24,6 +24,25 @@ func TestKonnectEventGateway(t *testing.T) {
 		},
 	}
 
+	t.Run("name pattern", func(t *testing.T) {
+		withName := func(name string) *konnectv1alpha1.KonnectEventGateway {
+			return &konnectv1alpha1.KonnectEventGateway{
+				ObjectMeta: common.CommonObjectMeta(ns.Name),
+				Spec: konnectv1alpha1.KonnectEventGatewaySpec{
+					KonnectConfiguration: validKonnectConfiguration,
+					APISpec:              &konnectv1alpha1.KonnectEventGatewayAPISpec{Name: konnectv1alpha1.GatewayName(name)},
+				},
+			}
+		}
+		const patternErr = "spec.apiSpec.name in body should match '^[\\p{L}\\p{N}][\\p{L}\\p{N} _\\-\\.:/+']*[\\p{L}\\p{N}]$'"
+		common.TestCasesGroup[*konnectv1alpha1.KonnectEventGateway]{
+			{Name: "non-ASCII name with every allowed separator", TestObject: withName("Zürich a b_c-d.e:f/g+h'i 東京")},
+			{Name: "name with !", TestObject: withName("gw!"), ExpectedErrorMessage: new(patternErr)},
+			{Name: "one-character name", TestObject: withName("g"), ExpectedErrorMessage: new(patternErr)},
+			{Name: "name starting with -", TestObject: withName("-gw"), ExpectedErrorMessage: new(patternErr)},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("source, mirror and apiSpec constraints", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.KonnectEventGateway]{
 			{

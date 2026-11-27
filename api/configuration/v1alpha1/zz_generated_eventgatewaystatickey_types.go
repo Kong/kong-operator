@@ -98,7 +98,7 @@ type EventGatewayStaticKeyAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
-	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _.:/+'-]*[\p{L}\p{N}]$`
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 
 	// Value is the static key's secret value: a base64-encoded 256-bit key.
@@ -111,6 +111,7 @@ type EventGatewayStaticKeyAPISpec struct {
 	// read it.
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="!has(self.value) || self.value.size() >= 1",message="an inline value must not be empty"
 	Value SensitiveDataSource `json:"value,omitzero"`
 }
 

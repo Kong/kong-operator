@@ -355,14 +355,14 @@ func getKonnectIDForUID[
 	}
 }
 
-// controlPlaneRefRejectedWithoutID reports whether the entity has no ControlPlane ID
+// controlPlaneRefUnresolvedWithoutID reports whether the entity has no ControlPlane ID
 // because its ControlPlaneRef never resolved to a usable ControlPlane:
 // ControlPlaneRefValid=False with reason Invalid (for example a Control Plane
 // Group) or NotProgrammed (the referenced ControlPlane was never programmed).
 // The ControlPlane ID is only copied to the status once the referenced
 // ControlPlane is programmed, so in both cases the entity can't have been
 // created in Konnect.
-func controlPlaneRefRejectedWithoutID(ent k8sutils.ConditionsAware) bool {
+func controlPlaneRefUnresolvedWithoutID(ent k8sutils.ConditionsAware) bool {
 	cpEnt, ok := ent.(interface{ GetControlPlaneID() string })
 	if !ok || cpEnt.GetControlPlaneID() != "" {
 		return false
@@ -394,7 +394,7 @@ func Delete[
 		// forever. An empty ControlPlane ID alone proves nothing: a KongRoute gets
 		// its ControlPlane ID from its KongService after the last status patch, so
 		// the UID probe must still run for it.
-		if controlPlaneRefRejectedWithoutID(ent) {
+		if controlPlaneRefUnresolvedWithoutID(ent) {
 			return nil
 		}
 

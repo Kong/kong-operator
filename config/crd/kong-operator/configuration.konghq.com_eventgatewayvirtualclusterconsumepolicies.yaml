@@ -113,6 +113,7 @@ spec:
                               required:
                               - type
                               type: object
+                            minItems: 1
                             type: array
                           partOfRecord:
                             description: Describes the parts of a record to decrypt.
@@ -120,7 +121,11 @@ spec:
                               description: |-
                                 DecryptionRecordPart * key - decrypt the record key
                                 * value - decrypt the record value
+                              enum:
+                              - key
+                              - value
                               type: string
+                            minItems: 1
                             type: array
                         required:
                         - failureMode
@@ -155,6 +160,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -200,6 +206,8 @@ spec:
                                       required:
                                       - match
                                       type: object
+                                    maxItems: 50
+                                    minItems: 1
                                     type: array
                                   expression:
                                     description: Expression configuration.
@@ -272,6 +280,7 @@ spec:
                               required:
                               - type
                               type: object
+                            minItems: 1
                             type: array
                         required:
                         - decryptFields
@@ -306,6 +315,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -387,6 +397,8 @@ spec:
                                         required:
                                         - match
                                         type: object
+                                      maxItems: 50
+                                      minItems: 1
                                       type: array
                                     expression:
                                       description: Expression configuration.
@@ -564,6 +576,7 @@ spec:
                               - strategy
                               type: object
                             maxItems: 256
+                            minItems: 1
                             type: array
                         required:
                         - failureMode
@@ -597,6 +610,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -663,6 +677,7 @@ spec:
                               required:
                               - op
                               type: object
+                            minItems: 1
                             type: array
                         type: object
                       description:
@@ -693,6 +708,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -1115,6 +1131,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -1160,6 +1177,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     type: object
                   transcode:
@@ -1539,6 +1557,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config

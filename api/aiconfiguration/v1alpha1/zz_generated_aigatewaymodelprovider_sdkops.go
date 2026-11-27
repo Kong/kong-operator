@@ -412,6 +412,48 @@ var AIGatewayModelProviderSDKOpsBoolFields = []AIGatewayModelProviderSDKOpsBoolF
 		},
 	},
 	{
+		Label: "fireworks.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"fireworks",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "fireworks.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"fireworks",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "fireworks.token_vault.cache.redis.ssl",
+		Path: []string{
+			"fireworks",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "fireworks.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"fireworks",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
 		Label: "gemini.config.auth.gcp.use_gcp_service_account",
 		Path: []string{
 			"gemini",
@@ -590,6 +632,48 @@ var AIGatewayModelProviderSDKOpsBoolFields = []AIGatewayModelProviderSDKOpsBoolF
 		},
 	},
 	{
+		Label: "meta.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"meta",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "meta.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"meta",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "meta.token_vault.cache.redis.ssl",
+		Path: []string{
+			"meta",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "meta.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"meta",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
 		Label: "mistral.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
 		Path: []string{
 			"mistral",
@@ -751,6 +835,48 @@ var AIGatewayModelProviderSDKOpsBoolFields = []AIGatewayModelProviderSDKOpsBoolF
 		Label: "sagemaker.token_vault.cache.redis.ssl_verify",
 		Path: []string{
 			"sagemaker",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "togetherai.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"togetherai",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "togetherai.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"togetherai",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "togetherai.token_vault.cache.redis.ssl",
+		Path: []string{
+			"togetherai",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "togetherai.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"togetherai",
 			"token_vault",
 			"cache",
 			"redis",
@@ -1075,6 +1201,15 @@ var AIGatewayModelProviderSDKOpsConstFields = []sdkOpsConstField{
 	},
 	{
 		Path: []string{
+			"fireworks",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
 			"gemini",
 			"config",
 			"auth",
@@ -1115,6 +1250,15 @@ var AIGatewayModelProviderSDKOpsConstFields = []sdkOpsConstField{
 	},
 	{
 		Path: []string{
+			"meta",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
 			"mistral",
 			"config",
 			"auth",
@@ -1134,6 +1278,15 @@ var AIGatewayModelProviderSDKOpsConstFields = []sdkOpsConstField{
 	{
 		Path: []string{
 			"openai",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"togetherai",
 			"config",
 			"auth",
 		},
@@ -1292,6 +1445,18 @@ var AIGatewayModelProviderSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 	},
 	{
 		Path: []string{
+			"fireworks",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"fireworks",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
 			"gemini",
 			"labels",
 		},
@@ -1340,6 +1505,18 @@ var AIGatewayModelProviderSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 	},
 	{
 		Path: []string{
+			"meta",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"meta",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
 			"mistral",
 			"labels",
 		},
@@ -1383,6 +1560,18 @@ var AIGatewayModelProviderSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 	{
 		Path: []string{
 			"sagemaker",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"togetherai",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"togetherai",
 			"managed_by",
 		},
 	},
@@ -1506,6 +1695,10 @@ func (s *AIGatewayModelProviderAPISpec) selectedSDKOpsPayload(payload map[string
 		selected = payload["deepseek"]
 		variant = "Deepseek"
 		variantJSON = "deepseek"
+	case AIGatewayModelProviderConfigTypeFireworks:
+		selected = payload["fireworks"]
+		variant = "Fireworks"
+		variantJSON = "fireworks"
 	case AIGatewayModelProviderConfigTypeGemini:
 		selected = payload["gemini"]
 		variant = "Gemini"
@@ -1522,6 +1715,10 @@ func (s *AIGatewayModelProviderAPISpec) selectedSDKOpsPayload(payload map[string
 		selected = payload["llama2"]
 		variant = "Llama2"
 		variantJSON = "llama2"
+	case AIGatewayModelProviderConfigTypeMeta:
+		selected = payload["meta"]
+		variant = "Meta"
+		variantJSON = "meta"
 	case AIGatewayModelProviderConfigTypeMistral:
 		selected = payload["mistral"]
 		variant = "Mistral"
@@ -1550,6 +1747,10 @@ func (s *AIGatewayModelProviderAPISpec) selectedSDKOpsPayload(payload map[string
 		selected = payload["sagemaker"]
 		variant = "Sagemaker"
 		variantJSON = "sagemaker"
+	case AIGatewayModelProviderConfigTypeTogetherai:
+		selected = payload["togetherai"]
+		variant = "Togetherai"
+		variantJSON = "togetherai"
 	case AIGatewayModelProviderConfigTypeTypesafe:
 		selected = payload["typesafe"]
 		variant = "Typesafe"
@@ -1655,6 +1856,13 @@ func (s *AIGatewayModelProviderAPISpec) toCreateAIGatewayModelProviderRequestFro
 		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestDeepseek(member)
 		return &target, nil
+	case "Fireworks":
+		var member sdkkonnectcomp.AIGatewayModelProviderFireworks
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderFireworks: %w", err)
+		}
+		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestFireworks(member)
+		return &target, nil
 	case "Gemini":
 		var member sdkkonnectcomp.AIGatewayModelProviderGemini
 		if err := json.Unmarshal(data, &member); err != nil {
@@ -1682,6 +1890,13 @@ func (s *AIGatewayModelProviderAPISpec) toCreateAIGatewayModelProviderRequestFro
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderLlama2: %w", err)
 		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestLlama2(member)
+		return &target, nil
+	case "Meta":
+		var member sdkkonnectcomp.AIGatewayModelProviderMeta
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderMeta: %w", err)
+		}
+		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestMeta(member)
 		return &target, nil
 	case "Mistral":
 		var member sdkkonnectcomp.AIGatewayModelProviderMistral
@@ -1731,6 +1946,13 @@ func (s *AIGatewayModelProviderAPISpec) toCreateAIGatewayModelProviderRequestFro
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderSagemaker: %w", err)
 		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestSagemaker(member)
+		return &target, nil
+	case "Togetherai":
+		var member sdkkonnectcomp.AIGatewayModelProviderTogetherai
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderTogetherai: %w", err)
+		}
+		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestTogetherai(member)
 		return &target, nil
 	case "Typesafe":
 		var member sdkkonnectcomp.AIGatewayModelProviderTypesafe
@@ -1817,6 +2039,13 @@ func (s *AIGatewayModelProviderAPISpec) toUpdateAIGatewayModelProviderRequestFro
 		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestDeepseek(member)
 		return &target, nil
+	case "Fireworks":
+		var member sdkkonnectcomp.AIGatewayModelProviderFireworks
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderFireworks: %w", err)
+		}
+		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestFireworks(member)
+		return &target, nil
 	case "Gemini":
 		var member sdkkonnectcomp.AIGatewayModelProviderGemini
 		if err := json.Unmarshal(data, &member); err != nil {
@@ -1844,6 +2073,13 @@ func (s *AIGatewayModelProviderAPISpec) toUpdateAIGatewayModelProviderRequestFro
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderLlama2: %w", err)
 		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestLlama2(member)
+		return &target, nil
+	case "Meta":
+		var member sdkkonnectcomp.AIGatewayModelProviderMeta
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderMeta: %w", err)
+		}
+		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestMeta(member)
 		return &target, nil
 	case "Mistral":
 		var member sdkkonnectcomp.AIGatewayModelProviderMistral
@@ -1893,6 +2129,13 @@ func (s *AIGatewayModelProviderAPISpec) toUpdateAIGatewayModelProviderRequestFro
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderSagemaker: %w", err)
 		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestSagemaker(member)
+		return &target, nil
+	case "Togetherai":
+		var member sdkkonnectcomp.AIGatewayModelProviderTogetherai
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderTogetherai: %w", err)
+		}
+		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestTogetherai(member)
 		return &target, nil
 	case "Typesafe":
 		var member sdkkonnectcomp.AIGatewayModelProviderTypesafe
@@ -2106,6 +2349,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 	}
 	// Resolve spec.apiSpec.*.config.auth.headers[].value
 	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Fireworks != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Fireworks.Config.Auth.Headers {
+				src := apiSpec.AIGatewayModelProviderConfig.Fireworks.Config.Auth.Headers[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.headers[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Fireworks.Config.Auth.Headers[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.headers[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Huggingface != nil {
 			for i := range apiSpec.AIGatewayModelProviderConfig.Huggingface.Config.Auth.Headers {
 				src := apiSpec.AIGatewayModelProviderConfig.Huggingface.Config.Auth.Headers[i].Value
@@ -2187,6 +2457,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 	}
 	// Resolve spec.apiSpec.*.config.auth.headers[].value
 	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Meta != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Meta.Config.Auth.Headers {
+				src := apiSpec.AIGatewayModelProviderConfig.Meta.Config.Auth.Headers[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.headers[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Meta.Config.Auth.Headers[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.headers[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Mistral != nil {
 			for i := range apiSpec.AIGatewayModelProviderConfig.Mistral.Config.Auth.Headers {
 				src := apiSpec.AIGatewayModelProviderConfig.Mistral.Config.Auth.Headers[i].Value
@@ -2262,6 +2559,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 					}
 					resolved := string(secretBytes)
 					apiSpec.AIGatewayModelProviderConfig.Openai.Config.Auth.Headers[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.headers[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Togetherai != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Togetherai.Config.Auth.Headers {
+				src := apiSpec.AIGatewayModelProviderConfig.Togetherai.Config.Auth.Headers[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.headers[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Togetherai.Config.Auth.Headers[i].Value.Value = &resolved
 				}
 			}
 		}
@@ -2565,6 +2889,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 	}
 	// Resolve spec.apiSpec.*.config.auth.params[].value
 	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Fireworks != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Fireworks.Config.Auth.Params {
+				src := apiSpec.AIGatewayModelProviderConfig.Fireworks.Config.Auth.Params[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.params[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Fireworks.Config.Auth.Params[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.params[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Huggingface != nil {
 			for i := range apiSpec.AIGatewayModelProviderConfig.Huggingface.Config.Auth.Params {
 				src := apiSpec.AIGatewayModelProviderConfig.Huggingface.Config.Auth.Params[i].Value
@@ -2646,6 +2997,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 	}
 	// Resolve spec.apiSpec.*.config.auth.params[].value
 	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Meta != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Meta.Config.Auth.Params {
+				src := apiSpec.AIGatewayModelProviderConfig.Meta.Config.Auth.Params[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.params[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Meta.Config.Auth.Params[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.params[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Mistral != nil {
 			for i := range apiSpec.AIGatewayModelProviderConfig.Mistral.Config.Auth.Params {
 				src := apiSpec.AIGatewayModelProviderConfig.Mistral.Config.Auth.Params[i].Value
@@ -2721,6 +3099,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 					}
 					resolved := string(secretBytes)
 					apiSpec.AIGatewayModelProviderConfig.Openai.Config.Auth.Params[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.params[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Togetherai != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Togetherai.Config.Auth.Params {
+				src := apiSpec.AIGatewayModelProviderConfig.Togetherai.Config.Auth.Params[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.params[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Togetherai.Config.Auth.Params[i].Value.Value = &resolved
 				}
 			}
 		}
@@ -3419,6 +3824,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 	}
 	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
 	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Fireworks != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Fireworks.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Fireworks.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Gemini != nil {
 			{
 				src := apiSpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Password
@@ -3527,6 +3959,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 	}
 	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
 	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Meta != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Meta.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Meta.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Mistral != nil {
 			{
 				src := apiSpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Password
@@ -3629,6 +4088,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 					}
 					resolved := string(secretBytes)
 					apiSpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Togetherai != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Togetherai.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Togetherai.TokenVault.Cache.Redis.Password.Value = &resolved
 				}
 			}
 		}
@@ -3986,6 +4472,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 	}
 	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
 	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Fireworks != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Fireworks.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Fireworks.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Gemini != nil {
 			{
 				src := apiSpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Sentinel.Password
@@ -4094,6 +4607,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 	}
 	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
 	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Meta != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Meta.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Meta.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Mistral != nil {
 			{
 				src := apiSpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Sentinel.Password
@@ -4196,6 +4736,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 					}
 					resolved := string(secretBytes)
 					apiSpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Togetherai != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Togetherai.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Togetherai.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
 				}
 			}
 		}
@@ -4381,6 +4948,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks.Config.Auth.Headers {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface.Config.Auth.Headers {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
@@ -4408,6 +4984,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta.Config.Auth.Headers {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.Config.Auth.Headers {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
@@ -4428,6 +5013,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai.Config.Auth.Headers {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai.Config.Auth.Headers {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
 					refs = append(refs, *item.Value.SecretRef)
 				}
@@ -4534,6 +5128,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks.Config.Auth.Params {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface.Config.Auth.Params {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
@@ -4561,6 +5164,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta.Config.Auth.Params {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.Config.Auth.Params {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
@@ -4581,6 +5193,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai.Config.Auth.Params {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai.Config.Auth.Params {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
 					refs = append(refs, *item.Value.SecretRef)
 				}
@@ -4824,6 +5445,13 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini != nil {
 			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Password.SecretRef != nil {
 				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Password.SecretRef)
@@ -4852,6 +5480,13 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral != nil {
 			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Password.SecretRef != nil {
 				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Password.SecretRef)
@@ -4876,6 +5511,13 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker != nil {
 			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Password.SecretRef != nil {
 				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai.TokenVault.Cache.Redis.Password.SecretRef)
 			}
 		}
 	}
@@ -4971,6 +5613,13 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Fireworks.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini != nil {
 			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
 				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
@@ -4999,6 +5648,13 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Meta.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral != nil {
 			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
 				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
@@ -5023,6 +5679,13 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker != nil {
 			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
 				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Togetherai.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
 			}
 		}
 	}
