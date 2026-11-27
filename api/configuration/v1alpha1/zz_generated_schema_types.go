@@ -171,7 +171,6 @@ type BackendClusterAuthenticationSaslAwsIamAssumeRole struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
 	SessionName string `json:"sessionName,omitzero"`
 }
 
@@ -196,7 +195,6 @@ type BackendClusterAuthenticationSaslPlain struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Password GatewaySecret `json:"password,omitzero"`
 	// A literal value or a reference to an existing secret as a template string
 	// expression.
@@ -206,7 +204,6 @@ type BackendClusterAuthenticationSaslPlain struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Username GatewaySecretReferenceOrLiteral `json:"username,omitzero"`
 }
 
@@ -230,7 +227,6 @@ type BackendClusterAuthenticationSaslScram struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Password GatewaySecret `json:"password,omitzero"`
 	// A literal value or a reference to an existing secret as a template string
 	// expression.
@@ -240,7 +236,6 @@ type BackendClusterAuthenticationSaslScram struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Username GatewaySecretReferenceOrLiteral `json:"username,omitzero"`
 }
 
@@ -409,7 +404,6 @@ type BackendClusterTLS struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=4096
 	CaBundle GatewaySecretReferenceOrLiteral `json:"caBundle,omitzero"`
 	// Client mTLS configuration.
 	//
@@ -688,7 +682,6 @@ type EventGatewayACLResourceName struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Match string `json:"match,omitzero"`
 }
 
@@ -3163,7 +3156,6 @@ type EventGatewayModifyHeaderRemoveAction struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Key string `json:"key,omitzero"`
 }
 
@@ -3173,13 +3165,11 @@ type EventGatewayModifyHeaderSetAction struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Key string `json:"key,omitzero"`
 	// The value of the header to set.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Value string `json:"value,omitzero"`
 }
 
@@ -3917,7 +3907,6 @@ type EventGatewayParsedRecordFieldPathsArrayItem struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Match string `json:"match,omitzero"`
 }
 
@@ -5555,7 +5544,6 @@ type EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitzero"`
 }
 
@@ -5671,7 +5659,6 @@ type EventGatewayParsedRecordTranscodeSchemaSourceInline struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Inline string `json:"inline,omitzero"`
 }
 
@@ -5695,14 +5682,12 @@ type EventGatewayParsedRecordTranscodeSchemaSourceReference struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Subject string `json:"subject,omitzero"`
 	// An expression that computes the schema registry version of the output data's
 	// schema.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Version string `json:"version,omitzero"`
 }
 
@@ -7117,7 +7102,6 @@ type EventGatewayTLSListenerPolicyConfigClientAuthentication struct {
 	// **Requires a minimum runtime version of `1.1`**.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
 	PrincipalMapping string `json:"principalMapping,omitzero"`
 	// TLS trust bundles contain CA certificate bundles used to verify client
 	// certificates.
@@ -7193,7 +7177,6 @@ type FetchKongIdentityPrincipal struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Directory string `json:"directory,omitzero"`
 	// Behavior when the Kong Identity principal lookup fails.
 	// * `error` - fail the authentication if the principal lookup fails.
@@ -7239,7 +7222,6 @@ type FetchKongIdentityPrincipalFetchBy struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Key string `json:"key,omitzero"`
 }
 
@@ -7253,7 +7235,6 @@ type FetchKongIdentityPrincipalOauthBearer struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Directory string `json:"directory,omitzero"`
 	// Behavior when the Kong Identity principal lookup fails.
 	// * `error` - fail the authentication if the principal lookup fails.
@@ -7301,7 +7282,6 @@ type ForwardToClusterByPortMappingConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$`
 	AdvertisedHost string `json:"advertisedHost,omitzero"`
 	// If set to `at_start`, the first port will be used as a bootstrap port.
@@ -7382,7 +7362,6 @@ type ForwardToClusterBySNIConfig struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[\.-]([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*([a-z0-9-]*[a-z0-9])$`
 	SniSuffix string `json:"sniSuffix,omitzero"`
 }
@@ -7610,7 +7589,6 @@ type NamespaceExactAllowListItem struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Backend string `json:"backend,omitzero"`
 }
 
@@ -7676,7 +7654,6 @@ type SchemaRegistryAuthenticationBasic struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Username GatewaySecretReferenceOrLiteral `json:"username,omitzero"`
 }
 
@@ -7804,7 +7781,6 @@ type SchemaRegistryConfluentConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Endpoint string `json:"endpoint,omitzero"`
 	// The format of the message.
 	//
@@ -8035,7 +8011,6 @@ type SchemaValidationInlineSchemaConfigAvro struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Schema string `json:"schema,omitzero"`
 }
 
@@ -8048,7 +8023,6 @@ type SchemaValidationInlineSchemaConfigJSON struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Schema string `json:"schema,omitzero"`
 }
 
@@ -8139,7 +8113,6 @@ type VirtualClusterAuthenticationAudience struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitzero"`
 }
 
@@ -8150,13 +8123,11 @@ type VirtualClusterAuthenticationClaimsMapping struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Scope string `json:"scope,omitzero"`
 	// Maps the subject claim.
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Sub string `json:"sub,omitzero"`
 }
 
@@ -8182,19 +8153,16 @@ type VirtualClusterAuthenticationJWKS struct {
 	// Duration after which the gateway will fetch and cache JWKS.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
 	CacheExpiration string `json:"cacheExpiration,omitzero"`
 	// URL for JWKS endpoint.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Endpoint string `json:"endpoint,omitzero"`
 	// Total time from establishing connection to receive a response from JWKS
 	// endpoint.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
 	Timeout string `json:"timeout,omitzero"`
 }
 
@@ -8256,7 +8224,6 @@ type VirtualClusterAuthenticationPrincipal struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Password GatewaySecret `json:"password,omitzero"`
 	// A literal value or a reference to an existing secret as a template string
 	// expression.
@@ -8266,7 +8233,6 @@ type VirtualClusterAuthenticationPrincipal struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Username GatewaySecretReferenceOrLiteral `json:"username,omitzero"`
 }
 
@@ -8506,7 +8472,6 @@ type VirtualClusterAuthenticationValidate struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Issuer string `json:"issuer,omitzero"`
 }
 
@@ -8698,7 +8663,6 @@ type VirtualClusterNamespaceIDSelectorExactListExactList struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Value string `json:"value,omitzero"`
 }
 
@@ -8708,7 +8672,6 @@ type VirtualClusterNamespaceIDSelectorGlob struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._?*-]+$`
 	Glob string `json:"glob,omitzero"`
 }
@@ -8857,7 +8820,6 @@ type VirtualClusterNamespaceTopicSelectorGlob struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._?*-]+$`
 	Glob string `json:"glob,omitzero"`
 }
@@ -8874,14 +8836,12 @@ type VirtualClusterTopicAlias struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Alias string `json:"alias,omitzero"`
 	// CEL expression evaluated against the connection's auth context.
 	// If omitted or empty, the alias is active for all connections.
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
 	Condition string `json:"condition,omitzero"`
 	// How to handle conflicts where an alias shadows a physical topic.
 	// * warn - activate the alias but log a warning and set the conflict metric to
@@ -8897,7 +8857,6 @@ type VirtualClusterTopicAlias struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Topic string `json:"topic,omitzero"`
 }
 

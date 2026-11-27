@@ -58,6 +58,9 @@ type ValidationConfig struct {
 	// a member of another type is refused, and so is a missing member whose
 	// schema has required fields.
 	UnionMemberRules bool `yaml:"unionMemberRules,omitempty"`
+	// OASMaxLengthOnly emits only the maxLength the OAS sets: no default on a
+	// string without one, except an enum, and none on inline sensitive values.
+	OASMaxLengthOnly bool `yaml:"oasMaxLengthOnly,omitempty"`
 }
 
 // CommonTypesConfig holds configuration for common types that can be shared

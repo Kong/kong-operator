@@ -689,3 +689,21 @@ func TestInlineSensitiveValueTags(t *testing.T) {
 	assert.Empty(t, inlineSensitiveValueTags(&parser.Property{Type: "string"}, on), "no minLength")
 	assert.Empty(t, inlineSensitiveValueTags(&parser.Property{Type: "string", MinLength: new(int64(1))}, config.ValidationConfig{}), "not opted in")
 }
+
+func TestKubebuilderTags_OASMaxLengthOnly(t *testing.T) {
+	on := config.ValidationConfig{OASMaxLengthOnly: true}
+	free := &parser.Property{Name: "schema", Type: "string", Required: true}
+	assert.Equal(t, []string{"+required", "+kubebuilder:validation:MinLength=1"}, kubebuilderTagsWith(free, nil, on), "no default maxLength")
+	assert.Contains(t, kubebuilderTagsWith(free, nil, config.ValidationConfig{}), "+kubebuilder:validation:MaxLength=253", "not opted in")
+
+	enum := &parser.Property{Name: "mode", Type: "string", Enum: []any{"a", "b"}}
+	assert.Contains(t, kubebuilderTagsWith(enum, nil, on), "+kubebuilder:validation:MaxLength=253", "an enum keeps the default")
+
+	bounded := &parser.Property{Name: "name", Type: "string", MaxLength: new(int64(255))}
+	assert.Contains(t, kubebuilderTagsWith(bounded, nil, on), "+kubebuilder:validation:MaxLength=255", "the OAS maximum stays")
+}
+
+func TestSensitiveDataSourceValueMaxLength(t *testing.T) {
+	assert.Equal(t, 4096, NewGenerator(Config{}).sensitiveDataSourceValueMaxLength())
+	assert.Equal(t, 0, NewGenerator(Config{Validation: config.ValidationConfig{OASMaxLengthOnly: true}}).sensitiveDataSourceValueMaxLength())
+}

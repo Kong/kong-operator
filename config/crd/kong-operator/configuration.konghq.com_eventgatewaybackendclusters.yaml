@@ -99,7 +99,6 @@ spec:
                                       The value becomes part of the assumed
                                       role user ARN, queryable as
                                       `arn:aws:sts::<account-id>:assumed-role/<role-name>/<session-name>`.
-                                    maxLength: 253
                                     type: string
                                 required:
                                 - arn
@@ -140,7 +139,6 @@ spec:
                               from API responses.
                               If provided as an expression, the expression itself is stored and returned
                               by the API.
-                            maxLength: 253
                             minLength: 1
                             type: string
                           username:
@@ -149,7 +147,6 @@ spec:
                               expression.
                               The value is stored and returned by the API as-is, not treated as sensitive
                               information.
-                            maxLength: 253
                             minLength: 1
                             type: string
                         required:
@@ -175,7 +172,6 @@ spec:
                               from API responses.
                               If provided as an expression, the expression itself is stored and returned
                               by the API.
-                            maxLength: 253
                             minLength: 1
                             type: string
                           username:
@@ -184,7 +180,6 @@ spec:
                               expression.
                               The value is stored and returned by the API as-is, not treated as sensitive
                               information.
-                            maxLength: 253
                             minLength: 1
                             type: string
                         required:
@@ -275,7 +270,6 @@ spec:
                           expression.
                           The value is stored and returned by the API as-is, not treated as sensitive
                           information.
-                        maxLength: 4096
                         minLength: 1
                         type: string
                       clientIdentity:
@@ -333,7 +327,6 @@ spec:
                                 description: |-
                                   Value contains the sensitive data provided inline.
                                   Required when type is 'inline'.
-                                maxLength: 4096
                                 type: string
                             required:
                             - type
@@ -397,7 +390,6 @@ spec:
                                 description: |-
                                   Value contains the sensitive data provided inline.
                                   Required when type is 'inline'.
-                                maxLength: 4096
                                 type: string
                             required:
                             - type

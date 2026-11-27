@@ -93,7 +93,6 @@ spec:
                         - secretRef
                         type: string
                       value:
-                        maxLength: 4096
                         type: string
                     required:
                     - type

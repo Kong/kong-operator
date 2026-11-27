@@ -161,6 +161,10 @@
   value that names a sibling key, such as a SASL username `password` or a
   topic alias `topic`, no longer breaks the conversion of its entity.
   [#6830](https://github.com/Kong/kong-operator/pull/6830)
+- Event Gateway CRDs: a string is only as long as the API allows. Inline
+  schemas, expressions such as conditions or `principalMapping`, CA bundles
+  and inline sensitive values are no longer capped at 253 or 4096 characters.
+  [#6863](https://github.com/Kong/kong-operator/pull/6863)
 - The admission webhook no longer fails or wrongly rejects changes while
   another `Gateway` is starting, for example `KongPlugin` changes failing with
   `internal validation error`. It now validates against a Kong Gateway that

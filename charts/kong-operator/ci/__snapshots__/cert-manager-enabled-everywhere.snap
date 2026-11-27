@@ -40544,7 +40544,6 @@ spec:
                                     pattern: ^arn:aws(-[a-z-]+)?:iam:.+
                                     type: string
                                   sessionName:
-                                    maxLength: 253
                                     type: string
                                 required:
                                 - arn
@@ -40571,11 +40570,9 @@ spec:
                       saslPlain:
                         properties:
                           password:
-                            maxLength: 253
                             minLength: 1
                             type: string
                           username:
-                            maxLength: 253
                             minLength: 1
                             type: string
                         required:
@@ -40592,11 +40589,9 @@ spec:
                             minLength: 1
                             type: string
                           password:
-                            maxLength: 253
                             minLength: 1
                             type: string
                           username:
-                            maxLength: 253
                             minLength: 1
                             type: string
                         required:
@@ -40659,7 +40654,6 @@ spec:
                   tls:
                     properties:
                       caBundle:
-                        maxLength: 4096
                         minLength: 1
                         type: string
                       clientIdentity:
@@ -40690,7 +40684,6 @@ spec:
                                 - secretRef
                                 type: string
                               value:
-                                maxLength: 4096
                                 type: string
                             required:
                             - type
@@ -40728,7 +40721,6 @@ spec:
                                 - secretRef
                                 type: string
                               value:
-                                maxLength: 4096
                                 type: string
                             required:
                             - type
@@ -40992,7 +40984,6 @@ spec:
                         - secretRef
                         type: string
                       value:
-                        maxLength: 4096
                         type: string
                     required:
                     - type
@@ -41005,10 +40996,8 @@ spec:
                     - message: only one of value and secretRef can be set
                       rule: '!(has(self.value) && has(self.secretRef))'
                   description:
-                    maxLength: 253
                     type: string
                   name:
-                    maxLength: 253
                     pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                 required:
@@ -41217,7 +41206,6 @@ spec:
                           portMapping:
                             properties:
                               advertisedHost:
-                                maxLength: 253
                                 minLength: 1
                                 pattern: ^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$
                                 type: string
@@ -41267,7 +41255,6 @@ spec:
                                 - type
                                 type: object
                               sniSuffix:
-                                maxLength: 253
                                 pattern: ^[\.-]([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*([a-z0-9-]*[a-z0-9])$
                                 type: string
                             type: object
@@ -41346,7 +41333,6 @@ spec:
                                       - secretRef
                                       type: string
                                     value:
-                                      maxLength: 4096
                                       type: string
                                   required:
                                   - type
@@ -41384,7 +41370,6 @@ spec:
                                       - secretRef
                                       type: string
                                     value:
-                                      maxLength: 4096
                                       type: string
                                   required:
                                   - type
@@ -41413,7 +41398,6 @@ spec:
                                 minLength: 1
                                 type: string
                               principalMapping:
-                                maxLength: 253
                                 type: string
                               tlsTrustBundles:
                                 items:
@@ -42125,7 +42109,6 @@ spec:
                                         - secretRef
                                         type: string
                                       value:
-                                        maxLength: 4096
                                         type: string
                                     required:
                                     - type
@@ -42138,7 +42121,6 @@ spec:
                                     - message: only one of value and secretRef can be set
                                       rule: '!(has(self.value) && has(self.secretRef))'
                                   username:
-                                    maxLength: 253
                                     minLength: 1
                                     type: string
                                 required:
@@ -42157,7 +42139,6 @@ spec:
                             - message: basic must be set when type is basic, and only then
                               rule: 'self.type == ''basic'' ? has(self.basic) : !has(self.basic)'
                           endpoint:
-                            maxLength: 253
                             minLength: 1
                             type: string
                           schemaType:
@@ -42444,7 +42425,6 @@ spec:
                         - secretRef
                         type: string
                       value:
-                        maxLength: 4096
                         type: string
                     required:
                     - type
@@ -42705,7 +42685,6 @@ spec:
                             - secretRef
                             type: string
                           value:
-                            maxLength: 4096
                             type: string
                         required:
                         - type
@@ -43024,7 +43003,6 @@ spec:
                                     items:
                                       properties:
                                         match:
-                                          maxLength: 253
                                           minLength: 1
                                           type: string
                                       required:
@@ -43137,7 +43115,6 @@ spec:
                                       items:
                                         properties:
                                           match:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -43349,7 +43326,6 @@ spec:
                                 remove:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -43358,11 +43334,9 @@ spec:
                                 set:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                     value:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -43488,7 +43462,6 @@ spec:
                                   avro:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -43497,7 +43470,6 @@ spec:
                                   json:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -43538,7 +43510,6 @@ spec:
                                   avro:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -43547,7 +43518,6 @@ spec:
                                   json:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -43702,7 +43672,6 @@ spec:
                                   inline:
                                     properties:
                                       inline:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -43719,7 +43688,6 @@ spec:
                                           recordHeader:
                                             properties:
                                               name:
-                                                maxLength: 253
                                                 minLength: 1
                                                 type: string
                                             type: object
@@ -43756,11 +43724,9 @@ spec:
                                         - name
                                         type: object
                                       subject:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                       version:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -43809,7 +43775,6 @@ spec:
                                   inline:
                                     properties:
                                       inline:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -43826,7 +43791,6 @@ spec:
                                           recordHeader:
                                             properties:
                                               name:
-                                                maxLength: 253
                                                 minLength: 1
                                                 type: string
                                             type: object
@@ -43863,11 +43827,9 @@ spec:
                                         - name
                                         type: object
                                       subject:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                       version:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -44382,7 +44344,6 @@ spec:
                                       items:
                                         properties:
                                           match:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -45472,7 +45433,6 @@ spec:
                                       items:
                                         properties:
                                           match:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -45563,7 +45523,6 @@ spec:
                                       items:
                                         properties:
                                           match:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -45775,7 +45734,6 @@ spec:
                                 remove:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -45784,11 +45742,9 @@ spec:
                                 set:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                     value:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -45912,7 +45868,6 @@ spec:
                                   avro:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -45921,7 +45876,6 @@ spec:
                                   json:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -45962,7 +45916,6 @@ spec:
                                   avro:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -45971,7 +45924,6 @@ spec:
                                   json:
                                     properties:
                                       schema:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -46098,7 +46050,6 @@ spec:
                                   inline:
                                     properties:
                                       inline:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -46115,7 +46066,6 @@ spec:
                                           recordHeader:
                                             properties:
                                               name:
-                                                maxLength: 253
                                                 minLength: 1
                                                 type: string
                                             type: object
@@ -46152,11 +46102,9 @@ spec:
                                         - name
                                         type: object
                                       subject:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                       version:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -46636,7 +46584,6 @@ spec:
                             fetchKongIdentityPrincipal:
                               properties:
                                 directory:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -46649,7 +46596,6 @@ spec:
                                 fetchBy:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -46666,18 +46612,15 @@ spec:
                             claimsMapping:
                               properties:
                                 scope:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 sub:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                               type: object
                             fetchKongIdentityPrincipal:
                               properties:
                                 directory:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -46694,14 +46637,11 @@ spec:
                             jwks:
                               properties:
                                 cacheExpiration:
-                                  maxLength: 253
                                   type: string
                                 endpoint:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 timeout:
-                                  maxLength: 253
                                   type: string
                               required:
                               - endpoint
@@ -46720,7 +46660,6 @@ spec:
                                   items:
                                     properties:
                                       name:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -46729,7 +46668,6 @@ spec:
                                   minItems: 1
                                   type: array
                                 issuer:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                               type: object
@@ -46741,7 +46679,6 @@ spec:
                             fetchKongIdentityPrincipal:
                               properties:
                                 directory:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -46754,7 +46691,6 @@ spec:
                                 fetchBy:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -46776,11 +46712,9 @@ spec:
                               items:
                                 properties:
                                   password:
-                                    maxLength: 253
                                     minLength: 1
                                     type: string
                                   username:
-                                    maxLength: 253
                                     minLength: 1
                                     type: string
                                 required:
@@ -46804,7 +46738,6 @@ spec:
                             fetchKongIdentityPrincipal:
                               properties:
                                 directory:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -46817,7 +46750,6 @@ spec:
                                 fetchBy:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -46890,7 +46822,6 @@ spec:
                                       items:
                                         properties:
                                           value:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -46902,7 +46833,6 @@ spec:
                                 glob:
                                   properties:
                                     glob:
-                                      maxLength: 253
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
@@ -46939,7 +46869,6 @@ spec:
                                       items:
                                         properties:
                                           backend:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -46957,7 +46886,6 @@ spec:
                                       maxLength: 253
                                       type: string
                                     glob:
-                                      maxLength: 253
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
@@ -47000,11 +46928,9 @@ spec:
                     items:
                       properties:
                         alias:
-                          maxLength: 253
                           minLength: 1
                           type: string
                         condition:
-                          maxLength: 253
                           type: string
                         conflict:
                           enum:
@@ -47013,7 +46939,6 @@ spec:
                           maxLength: 253
                           type: string
                         topic:
-                          maxLength: 253
                           minLength: 1
                           type: string
                       required:

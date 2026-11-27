@@ -80,7 +80,6 @@ spec:
                                   If not defined, it's listen_address.
                                   If listen_address is `0.0.0.0` it's the destination IP of the TCP
                                   connection.
-                                maxLength: 253
                                 minLength: 1
                                 pattern: ^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$
                                 type: string
@@ -191,7 +190,6 @@ spec:
                                   For example, `-keg.example.com`, `.keg.example.com`,
                                   `.namespace.svc.cluster.local`, and `.localhost` are all valid,
                                   while `keg.example.com` is not.
-                                maxLength: 253
                                 pattern: ^[\.-]([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*([a-z0-9-]*[a-z0-9])$
                                 type: string
                             type: object
@@ -314,7 +312,6 @@ spec:
                                       description: |-
                                         Value contains the sensitive data provided inline.
                                         Required when type is 'inline'.
-                                      maxLength: 4096
                                       type: string
                                   required:
                                   - type
@@ -382,7 +379,6 @@ spec:
                                       description: |-
                                         Value contains the sensitive data provided inline.
                                         Required when type is 'inline'.
-                                      maxLength: 4096
                                       type: string
                                   required:
                                   - type
@@ -435,7 +431,6 @@ spec:
                                   This expression must evaluate to a string.
 
                                   **Requires a minimum runtime version of `1.1`**.
-                                maxLength: 253
                                 type: string
                               tlsTrustBundles:
                                 description: |-

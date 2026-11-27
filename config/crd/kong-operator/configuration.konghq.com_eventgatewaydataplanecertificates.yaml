@@ -108,7 +108,6 @@ spec:
                         description: |-
                           Value contains the sensitive data provided inline.
                           Required when type is 'inline'.
-                        maxLength: 4096
                         type: string
                     required:
                     - type
@@ -123,11 +122,9 @@ spec:
                       rule: '!(has(self.value) && has(self.secretRef))'
                   description:
                     description: A description of the certificate.
-                    maxLength: 253
                     type: string
                   name:
                     description: The name to identify of the certificate.
-                    maxLength: 253
                     pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                 required:

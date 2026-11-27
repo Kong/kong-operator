@@ -146,7 +146,9 @@ type SensitiveDataSource struct {
 	// Required when type is 'inline'.
 	//
 	// +optional
+{{- if .SensitiveDataSourceValueMaxLength}}
 	// +kubebuilder:validation:MaxLength={{ .SensitiveDataSourceValueMaxLength }}
+{{- end}}
 	Value *string ` + "`" + `json:"value,omitempty"` + "`" + `
 
 	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.

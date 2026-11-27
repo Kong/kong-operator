@@ -304,7 +304,6 @@ spec:
                                               A field selector. It can select nested fields and array entries.
 
                                               Currently supported are exact matches.
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -475,7 +474,6 @@ spec:
                                               A field selector. It can select nested fields and array entries.
 
                                               Currently supported are exact matches.
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -779,7 +777,6 @@ spec:
                                   properties:
                                     key:
                                       description: The key of the header to remove.
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -790,12 +787,10 @@ spec:
                                   properties:
                                     key:
                                       description: The key of the header to set.
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                     value:
                                       description: The value of the header to set.
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -1024,7 +1019,6 @@ spec:
                                       schema:
                                         description: A schema that applies according
                                           to `schema_type`.
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -1036,7 +1030,6 @@ spec:
                                       schema:
                                         description: A schema that applies according
                                           to `schema_type`.
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -1103,7 +1096,6 @@ spec:
                                       schema:
                                         description: A schema that applies according
                                           to `schema_type`.
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -1115,7 +1107,6 @@ spec:
                                       schema:
                                         description: A schema that applies according
                                           to `schema_type`.
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -1351,7 +1342,6 @@ spec:
                                         description: |-
                                           The raw schema text (e.g.
                                           an Avro JSON schema) to use for the transcoded output data.
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -1380,7 +1370,6 @@ spec:
                                                 description: |-
                                                   The name is compatible with Confluent's serializer by default but can be
                                                   changed.
-                                                maxLength: 253
                                                 minLength: 1
                                                 type: string
                                             type: object
@@ -1435,14 +1424,12 @@ spec:
                                         description: |-
                                           An expression that computes the schema registry subject of the output data's
                                           schema.
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                       version:
                                         description: |-
                                           An expression that computes the schema registry version of the output data's
                                           schema.
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:

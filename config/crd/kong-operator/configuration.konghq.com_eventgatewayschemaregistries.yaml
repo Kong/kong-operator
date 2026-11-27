@@ -132,7 +132,6 @@ spec:
                                         description: |-
                                           Value contains the sensitive data provided inline.
                                           Required when type is 'inline'.
-                                        maxLength: 4096
                                         type: string
                                     required:
                                     - type
@@ -154,7 +153,6 @@ spec:
                                       expression.
                                       The value is stored and returned by the API as-is, not treated as sensitive
                                       information.
-                                    maxLength: 253
                                     minLength: 1
                                     type: string
                                 required:
@@ -176,7 +174,6 @@ spec:
                               rule: 'self.type == ''basic'' ? has(self.basic) : !has(self.basic)'
                           endpoint:
                             description: The endpoint of the Confluent schema registry.
-                            maxLength: 253
                             minLength: 1
                             type: string
                           schemaType:

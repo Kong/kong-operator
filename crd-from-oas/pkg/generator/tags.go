@@ -63,7 +63,7 @@ func kubebuilderTagsWith(prop *parser.Property, fieldCursor *config.FieldConfig,
 		}
 		if prop.MaxLength != nil {
 			tags = append(tags, markerValidationMaxLength(int(*prop.MaxLength)))
-		} else {
+		} else if !validation.OASMaxLengthOnly || len(prop.Enum) > 0 {
 			// Add default MaxLength for strings without explicit maxLength
 			tags = append(tags, markerValidationMaxLength(defaultMaxLength))
 		}

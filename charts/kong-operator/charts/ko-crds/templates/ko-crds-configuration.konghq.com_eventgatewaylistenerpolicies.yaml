@@ -58,7 +58,6 @@ spec:
                           portMapping:
                             properties:
                               advertisedHost:
-                                maxLength: 253
                                 minLength: 1
                                 pattern: ^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$
                                 type: string
@@ -108,7 +107,6 @@ spec:
                                 - type
                                 type: object
                               sniSuffix:
-                                maxLength: 253
                                 pattern: ^[\.-]([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*([a-z0-9-]*[a-z0-9])$
                                 type: string
                             type: object
@@ -189,7 +187,6 @@ spec:
                                       - secretRef
                                       type: string
                                     value:
-                                      maxLength: 4096
                                       type: string
                                   required:
                                   - type
@@ -231,7 +228,6 @@ spec:
                                       - secretRef
                                       type: string
                                     value:
-                                      maxLength: 4096
                                       type: string
                                   required:
                                   - type
@@ -264,7 +260,6 @@ spec:
                                 minLength: 1
                                 type: string
                               principalMapping:
-                                maxLength: 253
                                 type: string
                               tlsTrustBundles:
                                 items:

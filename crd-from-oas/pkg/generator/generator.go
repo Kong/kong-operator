@@ -4865,6 +4865,15 @@ func camelToSnakeCase(s string) string {
 	return string(buf)
 }
 
+// sensitiveDataSourceValueMaxLength returns the maxLength of inline sensitive
+// values, or 0 for none.
+func (g *Generator) sensitiveDataSourceValueMaxLength() int {
+	if g.config.Validation.OASMaxLengthOnly {
+		return 0
+	}
+	return sensitiveDataSourceValueMaxLength
+}
+
 // checkSDKUnionDiscriminator panics when the group lists its union
 // discriminators and the union typeName uses another one: its conversion to
 // SDK requests would never flatten it.
@@ -5209,7 +5218,7 @@ func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConf
 		ObjectRefImport:                         objectRefImport,
 		Namespaced:                              g.objectRefNamespaced(),
 		HasSecretRefEntities:                    hasSecretRefs,
-		SensitiveDataSourceValueMaxLength:       sensitiveDataSourceValueMaxLength,
+		SensitiveDataSourceValueMaxLength:       g.sensitiveDataSourceValueMaxLength(),
 		SensitiveDataSourceTypeValidations:      fieldValidations(sensitiveCursor, "type"),
 		SensitiveDataSourceSecretRefValidations: fieldValidations(sensitiveCursor, "secretRef"),
 

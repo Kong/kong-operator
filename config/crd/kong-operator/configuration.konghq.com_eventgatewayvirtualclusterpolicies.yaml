@@ -139,7 +139,6 @@ spec:
                                               Currently supported are exact matches and globs.
                                               All `*` characters are interpreted as globs, i.e.
                                               they match zero or more of any character.
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:

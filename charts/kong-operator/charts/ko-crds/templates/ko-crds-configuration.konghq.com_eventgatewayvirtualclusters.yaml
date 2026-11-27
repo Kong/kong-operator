@@ -68,7 +68,6 @@ spec:
                             fetchKongIdentityPrincipal:
                               properties:
                                 directory:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -81,7 +80,6 @@ spec:
                                 fetchBy:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -98,18 +96,15 @@ spec:
                             claimsMapping:
                               properties:
                                 scope:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 sub:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                               type: object
                             fetchKongIdentityPrincipal:
                               properties:
                                 directory:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -126,14 +121,11 @@ spec:
                             jwks:
                               properties:
                                 cacheExpiration:
-                                  maxLength: 253
                                   type: string
                                 endpoint:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 timeout:
-                                  maxLength: 253
                                   type: string
                               required:
                               - endpoint
@@ -152,7 +144,6 @@ spec:
                                   items:
                                     properties:
                                       name:
-                                        maxLength: 253
                                         minLength: 1
                                         type: string
                                     required:
@@ -161,7 +152,6 @@ spec:
                                   minItems: 1
                                   type: array
                                 issuer:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                               type: object
@@ -173,7 +163,6 @@ spec:
                             fetchKongIdentityPrincipal:
                               properties:
                                 directory:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -186,7 +175,6 @@ spec:
                                 fetchBy:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -208,11 +196,9 @@ spec:
                               items:
                                 properties:
                                   password:
-                                    maxLength: 253
                                     minLength: 1
                                     type: string
                                   username:
-                                    maxLength: 253
                                     minLength: 1
                                     type: string
                                 required:
@@ -236,7 +222,6 @@ spec:
                             fetchKongIdentityPrincipal:
                               properties:
                                 directory:
-                                  maxLength: 253
                                   minLength: 1
                                   type: string
                                 failureMode:
@@ -249,7 +234,6 @@ spec:
                                 fetchBy:
                                   properties:
                                     key:
-                                      maxLength: 253
                                       minLength: 1
                                       type: string
                                   required:
@@ -328,7 +312,6 @@ spec:
                                       items:
                                         properties:
                                           value:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -340,7 +323,6 @@ spec:
                                 glob:
                                   properties:
                                     glob:
-                                      maxLength: 253
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
@@ -378,7 +360,6 @@ spec:
                                       items:
                                         properties:
                                           backend:
-                                            maxLength: 253
                                             minLength: 1
                                             type: string
                                         required:
@@ -396,7 +377,6 @@ spec:
                                       maxLength: 253
                                       type: string
                                     glob:
-                                      maxLength: 253
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
@@ -440,11 +420,9 @@ spec:
                     items:
                       properties:
                         alias:
-                          maxLength: 253
                           minLength: 1
                           type: string
                         condition:
-                          maxLength: 253
                           type: string
                         conflict:
                           enum:
@@ -453,7 +431,6 @@ spec:
                           maxLength: 253
                           type: string
                         topic:
-                          maxLength: 253
                           minLength: 1
                           type: string
                       required:
