@@ -74,6 +74,7 @@
   period. When the version changes because of a write the operator didn't make,
   it GETs each entity and sends a PUT only if the entity drifted.
   [#6741](https://github.com/Kong/kong-operator/pull/6741)
+  [#6864](https://github.com/Kong/kong-operator/pull/6864)
 
 ### Fixes
 
