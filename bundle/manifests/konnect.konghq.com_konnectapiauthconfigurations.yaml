@@ -1,0 +1,154 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  name: konnectapiauthconfigurations.konnect.konghq.com
+spec:
+  group: konnect.konghq.com
+  names:
+    categories:
+      - kong
+      - konnect
+    kind: KonnectAPIAuthConfiguration
+    listKind: KonnectAPIAuthConfigurationList
+    plural: konnectapiauthconfigurations
+    singular: konnectapiauthconfiguration
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=='APIAuthValid')].status
+          name: Valid
+          type: string
+        - jsonPath: .status.organizationID
+          name: OrgID
+          type: string
+        - jsonPath: .status.serverURL
+          name: ServerURL
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                secretRef:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                  type: object
+                  x-kubernetes-map-type: atomic
+                serverURL:
+                  type: string
+                  x-kubernetes-validations:
+                    - message: Server URL is required
+                      rule: size(self) > 0
+                    - message: Server URL is immutable
+                      rule: self == oldSelf
+                    - message: Server URL must use HTTPs if specifying scheme
+                      rule: 'isURL(self) ? url(self).getScheme() == ''https'' : true'
+                    - message: Server URL must satisfy hostname (RFC 1123) regex if not a valid absolute URL
+                      rule: 'size(self) > 0 && !isURL(self) ? self.matches(''^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]).)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$'') : true'
+                token:
+                  type: string
+                type:
+                  enum:
+                    - token
+                    - secretRef
+                  type: string
+              required:
+                - serverURL
+                - type
+              type: object
+              x-kubernetes-validations:
+                - message: spec.token is required if auth type is set to token
+                  rule: 'self.type == ''token'' ? size(self.token) > 0 : true'
+                - message: spec.secretRef is required if auth type is set to secretRef
+                  rule: 'self.type == ''secretRef'' ? has(self.secretRef) : true'
+                - message: spec.token and spec.secretRef cannot be set at the same time
+                  rule: '!(has(self.token) && has(self.secretRef))'
+            status:
+              properties:
+                conditions:
+                  default:
+                    - lastTransitionTime: "1970-01-01T00:00:00Z"
+                      message: Waiting for controller
+                      reason: Pending
+                      status: Unknown
+                      type: Valid
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 8
+                  minItems: 1
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                organizationID:
+                  type: string
+                serverURL:
+                  type: string
+              type: object
+          required:
+            - spec
+          type: object
+          x-kubernetes-validations:
+            - message: Konnect tokens have to start with spat_ or kpat_
+              rule: self.spec.type != 'token' || (self.spec.token.startsWith('spat_') || self.spec.token.startsWith('kpat_'))
+            - message: Token is required once set
+              rule: self.spec.type != 'token' || (!has(oldSelf.spec.token) || has(self.spec.token))
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

@@ -1,0 +1,195 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  name: kongsnis.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    categories:
+      - kong
+    kind: KongSNI
+    listKind: KongSNIList
+    plural: kongsnis
+    singular: kongsni
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=='Programmed')].status
+          name: Programmed
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                adopt:
+                  properties:
+                    from:
+                      enum:
+                        - konnect
+                      type: string
+                    konnect:
+                      properties:
+                        id:
+                          maxLength: 36
+                          minLength: 1
+                          type: string
+                      required:
+                        - id
+                      type: object
+                    mode:
+                      enum:
+                        - match
+                        - override
+                      type: string
+                  required:
+                    - from
+                  type: object
+                  x-kubernetes-validations:
+                    - message: '''from''(adopt source) is immutable'
+                      rule: self.from == oldSelf.from
+                    - message: Must specify Konnect options when from='konnect'
+                      rule: 'self.from == ''konnect'' ? has(self.konnect) : true'
+                    - message: konnect.id is immutable
+                      rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id) : true'
+                certificateRef:
+                  properties:
+                    name:
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    namespace:
+                      maxLength: 253
+                      type: string
+                  required:
+                    - name
+                  type: object
+                name:
+                  minLength: 1
+                  type: string
+                tags:
+                  items:
+                    type: string
+                  maxItems: 20
+                  type: array
+                  x-kubernetes-validations:
+                    - message: tags entries must not be longer than 128 characters
+                      rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                    - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                      rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
+              required:
+                - certificateRef
+                - name
+              type: object
+              x-kubernetes-validations:
+                - message: Cannot set or unset spec.adopt in updates
+                  rule: (has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))
+            status:
+              default:
+                conditions:
+                  - lastTransitionTime: "1970-01-01T00:00:00Z"
+                    message: Waiting for controller
+                    reason: Pending
+                    status: Unknown
+                    type: Programmed
+              properties:
+                conditions:
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 8
+                  minItems: 1
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                konnect:
+                  properties:
+                    certificateID:
+                      type: string
+                    controlPlaneID:
+                      type: string
+                    id:
+                      maxLength: 256
+                      type: string
+                    organizationID:
+                      maxLength: 256
+                      type: string
+                    serverURL:
+                      maxLength: 512
+                      type: string
+                  type: object
+                sync:
+                  properties:
+                    hashVersion:
+                      maxLength: 16
+                      type: string
+                    payloadHash:
+                      pattern: ^sha256:[0-9a-f]{64}$
+                      type: string
+                    representationHash:
+                      pattern: ^sha256:[0-9a-f]{64}$
+                      type: string
+                  type: object
+              type: object
+          required:
+            - spec
+          type: object
+          x-kubernetes-validations:
+            - message: spec.certificateRef is immutable when programmed
+              rule: '(!self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.certificateRef == self.spec.certificateRef'
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

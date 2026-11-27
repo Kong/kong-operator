@@ -1,0 +1,7 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: IngressClassParameters
+metadata:
+  name: kong-ingress-class-parameters
+spec:
+  enableLegacyRegexDetection: false
+  serviceUpstream: false

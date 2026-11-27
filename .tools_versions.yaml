@@ -2,6 +2,10 @@
 code-generator: "0.37.3"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
 controller-tools: "0.23.0"
+# renovate: datasource=github-releases depName=operator-framework/operator-sdk
+operator-sdk: "1.42.3"
+# renovate: datasource=github-releases depName=operator-framework/operator-registry
+opm: "1.74.0"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci-lint: "2.15.0"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold

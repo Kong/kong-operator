@@ -601,6 +601,11 @@ jobs:
       # before the release workflow is triggered.
       - name: Generate bundle
         if: ${{ inputs.regenerate-bundle }}
+        env:
+          # The bundle must reference the published operator image by digest.
+          # build-push-images runs before this job and exports the index digest.
+          BUNDLE_VERSION: ${{ needs.semver.outputs.fullversion }}
+          OPERATOR_IMAGE: ${{ inputs.registry }}/${{ inputs.image-name }}@${{ needs.build-push-images.outputs.index_digest }}
         run: make bundle
 
       - name: GPG sign the commits
@@ -629,6 +634,8 @@ jobs:
             VERSION
             config
             charts
+            bundle
+            bundle.Dockerfile
           commit-message: "${{ env.MSG }}"
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>

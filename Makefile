@@ -64,7 +64,7 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 TOOLS_VERSIONS_FILE = $(PROJECT_DIR)/.tools_versions.yaml
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold crd-ref-docs crdify grpcurl
+tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold crd-ref-docs crdify grpcurl operator-sdk opm
 
 MISE := $(shell which mise)
 MISE_FILE := .mise.toml
@@ -103,6 +103,21 @@ mise-install-global: mise
 	@$(MISE) which $(DEP_BIN) >/dev/null 2>&1 || $(MISE) install -q $(DEP_VER)
 
 YQ = yq
+
+OPERATOR_SDK_VERSION = $(shell $(YQ) -r '.operator-sdk' < $(TOOLS_VERSIONS_FILE))
+OPERATOR_SDK = $(PROJECT_DIR)/bin/installs/github-operator-framework-operator-sdk/$(OPERATOR_SDK_VERSION)/operator-sdk
+.PHONY: operator-sdk
+operator-sdk: mise ## Download operator-sdk locally if necessary.
+	$(MAKE) mise-install TOOL_BIN=$(OPERATOR_SDK) DEP_VER=github:operator-framework/operator-sdk@$(OPERATOR_SDK_VERSION)
+
+OPM_VERSION = $(shell $(YQ) -r '.opm' < $(TOOLS_VERSIONS_FILE))
+OPM = $(PROJECT_DIR)/bin/installs/github-operator-framework-operator-registry/$(OPM_VERSION)/opm
+.PHONY: opm
+opm: mise ## Download opm locally if necessary.
+	$(MAKE) mise-install TOOL_BIN=$(OPM) DEP_VER=github:operator-framework/operator-registry@$(OPM_VERSION)
+	@# operator-registry ships raw per-platform binaries, which mise stores under
+	@# an OS-named file. Normalize to a stable path.
+	@[ -x "$(OPM)" ] || cp "$(PROJECT_DIR)/bin/installs/github-operator-framework-operator-registry/$(OPM_VERSION)/$(shell go env GOOS)" "$(OPM)" && chmod +x "$(OPM)"
 
 CONTROLLER_GEN_VERSION = $(shell $(YQ) -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-controller-tools/$(CONTROLLER_GEN_VERSION)/controller-gen
@@ -410,6 +425,103 @@ generate.apidocs: crd-ref-docs
 .PHONY: generate.lint-fix
 generate.lint-fix: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) --fix
+
+# OLM bundle generation for the Red Hat certification. The bundle is built
+# from the kustomize configuration (config/manifests aggregating config/olm),
+# not from the Helm chart. hack/verify-bundle.sh guards against the mistakes
+# operator-sdk generate bundle is known to make (see the certification spec).
+BUNDLE_PACKAGE ?= kong-operator
+BUNDLE_VERSION ?= $(VERSION)
+BUNDLE_CHANNELS ?= candidate
+# Red Hat requires the bundle to declare the OpenShift versions it supports.
+# A single version means that version and every later one.
+OPENSHIFT_VERSIONS ?= v4.21
+BUNDLE_IMAGE ?= docker.io/kong/kong-operator-bundle:$(BUNDLE_VERSION)
+# The operator image the bundle references. On releases this must be the
+# digest-pinned published -redhat image, which the release workflow passes in.
+# On PRs and local runs a tag is acceptable, with ALLOW_UNPINNED_IMAGES=true to
+# skip the pinning check for this image only; the other related images are
+# always checked.
+OPERATOR_IMAGE ?= docker.io/kong/kong-operator:$(BUNDLE_VERSION)-redhat
+ALLOW_UNPINNED_IMAGES ?= false
+
+.PHONY: generate.csv-manifests
+generate.csv-manifests:
+	bash scripts/generate-csv-manifests.sh
+
+.PHONY: bundle
+bundle: operator-sdk kustomize generate.csv-manifests
+	$(KUSTOMIZE) build --load-restrictor LoadRestrictionsNone config/manifests | \
+		$(OPERATOR_SDK) generate bundle --output-dir bundle --package $(BUNDLE_PACKAGE) \
+			--channels $(BUNDLE_CHANNELS) --default-channel $(BUNDLE_CHANNELS) --version $(BUNDLE_VERSION)
+	@# operator-sdk's known bundle-generation mistakes (observed during the
+	@# certification prototyping): it drops webhookdefinitions and
+	@# alm-examples, replaces spec.relatedImages with entries derived from the
+	@# RELATED_IMAGE_* env vars (dropping the rest) and adds duplicate owned
+	@# entries. Restore them from the CSV base, and pin the operator image
+	@# references to OPERATOR_IMAGE. Every assignment is its own yq call:
+	@# chaining assignments with a pipe makes yq drop all but the last.
+	@# relatedImages is built in one call that restores the base entries and
+	@# appends the operator entry from OPERATOR_IMAGE. Restoring it afterwards
+	@# would put the base placeholder back and lose the pin. createdAt is set by
+	@# the generator, so it must not land in the committed output. The yq writes
+	@# leave the assigned subtrees in flow style, so the CSV is re-rendered in
+	@# block style at the end to keep the committed copy reviewable.
+	BASE_CSV=config/manifests/bases/$(BUNDLE_PACKAGE).clusterserviceversion.yaml; \
+	CSV=bundle/manifests/$(BUNDLE_PACKAGE).clusterserviceversion.yaml; \
+	RELATED=$$($(YQ) -o json -I=0 '.spec.relatedImages' $$BASE_CSV); \
+	OPERATOR_IMAGE="$(OPERATOR_IMAGE)" RELATED="$$RELATED" $(YQ) -i \
+		'.spec.relatedImages = ((strenv(RELATED) | fromjson) + [{"image": strenv(OPERATOR_IMAGE), "name": "operator"}])' $$CSV; \
+	OPERATOR_IMAGE="$(OPERATOR_IMAGE)" $(YQ) -i \
+		'.metadata.annotations.containerImage = strenv(OPERATOR_IMAGE)' $$CSV; \
+	OPERATOR_IMAGE="$(OPERATOR_IMAGE)" $(YQ) -i \
+		'.spec.install.spec.deployments[].spec.template.spec.containers[] |= (.image = strenv(OPERATOR_IMAGE))' $$CSV; \
+	WEBHOOKDEFS=$$($(YQ) -o json -I=0 '.spec.webhookdefinitions' $$BASE_CSV) $(YQ) -i \
+		'.spec.webhookdefinitions = (strenv(WEBHOOKDEFS) | fromjson)' $$CSV; \
+	ALM=$$($(YQ) -r '.metadata.annotations.alm-examples' $$BASE_CSV) $(YQ) -i \
+		'.metadata.annotations.alm-examples = strenv(ALM)' $$CSV; \
+	OWNED=$$($(YQ) -o json -I=0 '.spec.customresourcedefinitions.owned' $$BASE_CSV) $(YQ) -i \
+		'.spec.customresourcedefinitions.owned = (strenv(OWNED) | fromjson)' $$CSV; \
+	$(YQ) -i 'del(.metadata.annotations.createdAt)' $$CSV; \
+	$(YQ) -i -P '.' $$CSV
+	# The 90 CRDs and their generated schema descriptions exceed the 1 MB
+	# compressed bundle size limit; the descriptions are most of the weight.
+	# Strip them from the bundled CRDs only: the CRDs in config/crd keep
+	# them, and the CSV descriptions cover the OperatorHub UI.
+	# Only string values are removed. Some CRDs declare a schema property named
+	# description, and deleting that would drop a real field from the schema.
+	for f in bundle/manifests/*.yaml; do \
+		[ "$$($(YQ) '.kind' $$f)" = "CustomResourceDefinition" ] || continue; \
+		$(YQ) -i 'del(.. | select((key == "description") and (tag == "!!str")))' $$f; \
+	done
+	@# Red Hat requires the OpenShift versions annotation, operator-sdk doesn't add it.
+	$(YQ) -i '.annotations["com.redhat.openshift.versions"] = "$(OPENSHIFT_VERSIONS)"' bundle/metadata/annotations.yaml
+	@grep -q "com.redhat.openshift.versions" bundle.Dockerfile || \
+		printf 'LABEL com.redhat.openshift.versions=%s\n' "$(OPENSHIFT_VERSIONS)" >> bundle.Dockerfile
+	./hack/verify-bundle.sh
+
+.PHONY: bundle.validate
+bundle.validate: operator-sdk
+	$(OPERATOR_SDK) bundle validate ./bundle
+	$(OPERATOR_SDK) bundle validate ./bundle --select-optional suite=operatorframework
+	$(OPERATOR_SDK) bundle validate ./bundle --select-optional name=good-practices
+
+.PHONY: bundle.build
+bundle.build: bundle
+	docker build -f bundle.Dockerfile -t $(BUNDLE_IMAGE) .
+
+.PHONY: bundle.push
+bundle.push: bundle.build
+	docker push $(BUNDLE_IMAGE)
+
+# Test-only catalog image: Red Hat builds the real catalogs for the
+# certified-operators submissions. This is for local OpenShift validation.
+.PHONY: catalog.build
+catalog.build: opm bundle.push
+	rm -rf catalog-test
+	mkdir -p catalog-test
+	$(OPM) render $(BUNDLE_IMAGE) --output yaml > catalog-test/catalog.yaml
+	$(OPM) generate dockerfile catalog-test
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets

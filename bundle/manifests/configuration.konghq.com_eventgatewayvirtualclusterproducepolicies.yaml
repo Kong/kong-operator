@@ -1,0 +1,1022 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  name: eventgatewayvirtualclusterproducepolicies.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    categories:
+      - kong
+    kind: EventGatewayVirtualClusterProducePolicy
+    listKind: EventGatewayVirtualClusterProducePolicyList
+    plural: eventgatewayvirtualclusterproducepolicies
+    singular: eventgatewayvirtualclusterproducepolicy
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.id
+          name: ID
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Programmed')].status
+          name: Programmed
+          type: string
+        - jsonPath: .status.organizationID
+          name: OrgID
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                apiSpec:
+                  properties:
+                    encrypt:
+                      properties:
+                        condition:
+                          maxLength: 1000
+                          type: string
+                        config:
+                          properties:
+                            encryptionKey:
+                              properties:
+                                aws:
+                                  properties:
+                                    arn:
+                                      maxLength: 2048
+                                      minLength: 10
+                                      pattern: ^arn:aws:kms:.+
+                                      type: string
+                                  required:
+                                    - arn
+                                  type: object
+                                static:
+                                  properties:
+                                    key:
+                                      properties:
+                                        kind:
+                                          default: EventGatewayStaticKey
+                                          enum:
+                                            - EventGatewayStaticKey
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                        - name
+                                      type: object
+                                  required:
+                                    - key
+                                  type: object
+                                type:
+                                  enum:
+                                    - aws
+                                    - static
+                                  minLength: 1
+                                  type: string
+                              required:
+                                - type
+                              type: object
+                              x-kubernetes-validations:
+                                - message: aws must be set only when type is aws
+                                  rule: 'self.type == ''aws'' ? has(self.aws) : !has(self.aws)'
+                                - message: static must be set only when type is static
+                                  rule: 'self.type == ''static'' ? has(self.static) : !has(self.static)'
+                            failureMode:
+                              enum:
+                                - error
+                                - passthrough
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            partOfRecord:
+                              items:
+                                enum:
+                                  - key
+                                  - value
+                                type: string
+                              minItems: 1
+                              type: array
+                          required:
+                            - encryptionKey
+                            - failureMode
+                            - partOfRecord
+                          type: object
+                        description:
+                          maxLength: 512
+                          type: string
+                        enabled:
+                          enum:
+                            - Enabled
+                            - Disabled
+                          type: string
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                            type: string
+                          maxProperties: 50
+                          type: object
+                        name:
+                          maxLength: 255
+                          type: string
+                      required:
+                        - config
+                      type: object
+                    encryptFields:
+                      properties:
+                        condition:
+                          maxLength: 1000
+                          type: string
+                        config:
+                          properties:
+                            encryptFields:
+                              items:
+                                properties:
+                                  encryptionKey:
+                                    properties:
+                                      aws:
+                                        properties:
+                                          arn:
+                                            maxLength: 2048
+                                            minLength: 10
+                                            pattern: ^arn:aws:kms:.+
+                                            type: string
+                                        required:
+                                          - arn
+                                        type: object
+                                      static:
+                                        properties:
+                                          key:
+                                            properties:
+                                              kind:
+                                                default: EventGatewayStaticKey
+                                                enum:
+                                                  - EventGatewayStaticKey
+                                                type: string
+                                              name:
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                type: string
+                                            required:
+                                              - name
+                                            type: object
+                                        required:
+                                          - key
+                                        type: object
+                                      type:
+                                        enum:
+                                          - aws
+                                          - static
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                      - type
+                                    type: object
+                                  paths:
+                                    properties:
+                                      array:
+                                        items:
+                                          properties:
+                                            match:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - match
+                                          type: object
+                                        maxItems: 50
+                                        minItems: 1
+                                        type: array
+                                      expression:
+                                        type: string
+                                      type:
+                                        enum:
+                                          - array
+                                          - expression
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                      - type
+                                    type: object
+                                required:
+                                  - encryptionKey
+                                  - paths
+                                type: object
+                              maxItems: 256
+                              minItems: 1
+                              type: array
+                            failureMode:
+                              enum:
+                                - reject
+                                - passthrough
+                                - mark
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                          required:
+                            - encryptFields
+                            - failureMode
+                          type: object
+                        description:
+                          maxLength: 512
+                          type: string
+                        enabled:
+                          enum:
+                            - Enabled
+                            - Disabled
+                          type: string
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                            type: string
+                          maxProperties: 50
+                          type: object
+                        name:
+                          maxLength: 255
+                          type: string
+                      required:
+                        - config
+                      type: object
+                    maskFields:
+                      properties:
+                        condition:
+                          maxLength: 1000
+                          type: string
+                        config:
+                          properties:
+                            failureMode:
+                              enum:
+                                - reject
+                                - passthrough
+                                - mark
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            maskFields:
+                              items:
+                                properties:
+                                  paths:
+                                    properties:
+                                      array:
+                                        items:
+                                          properties:
+                                            match:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - match
+                                          type: object
+                                        maxItems: 50
+                                        minItems: 1
+                                        type: array
+                                      expression:
+                                        type: string
+                                      type:
+                                        enum:
+                                          - array
+                                          - expression
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                      - type
+                                    type: object
+                                  strategy:
+                                    properties:
+                                      email:
+                                        properties:
+                                          domain:
+                                            properties:
+                                              keepAll:
+                                                type: object
+                                              keepChars:
+                                                properties:
+                                                  first:
+                                                    minimum: 0
+                                                    type: integer
+                                                  last:
+                                                    minimum: 0
+                                                    type: integer
+                                                  phrase:
+                                                    maxLength: 255
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                  - phrase
+                                                type: object
+                                              replace:
+                                                properties:
+                                                  phrase:
+                                                    maxLength: 255
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                  - phrase
+                                                type: object
+                                              type:
+                                                enum:
+                                                  - keepAll
+                                                  - keepChars
+                                                  - replace
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                              - type
+                                            type: object
+                                          localPart:
+                                            properties:
+                                              keepChars:
+                                                properties:
+                                                  first:
+                                                    minimum: 0
+                                                    type: integer
+                                                  last:
+                                                    minimum: 0
+                                                    type: integer
+                                                  phrase:
+                                                    maxLength: 255
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                  - phrase
+                                                type: object
+                                              replace:
+                                                properties:
+                                                  phrase:
+                                                    maxLength: 255
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                  - phrase
+                                                type: object
+                                              type:
+                                                enum:
+                                                  - keepChars
+                                                  - replace
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                              - type
+                                            type: object
+                                        required:
+                                          - domain
+                                          - localPart
+                                        type: object
+                                      keepChars:
+                                        properties:
+                                          first:
+                                            minimum: 0
+                                            type: integer
+                                          last:
+                                            minimum: 0
+                                            type: integer
+                                          phrase:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                          - phrase
+                                        type: object
+                                      replace:
+                                        properties:
+                                          phrase:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                          - phrase
+                                        type: object
+                                      type:
+                                        enum:
+                                          - email
+                                          - keepChars
+                                          - replace
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                      - type
+                                    type: object
+                                required:
+                                  - paths
+                                  - strategy
+                                type: object
+                              maxItems: 256
+                              minItems: 1
+                              type: array
+                          required:
+                            - failureMode
+                            - maskFields
+                          type: object
+                        description:
+                          maxLength: 512
+                          type: string
+                        enabled:
+                          enum:
+                            - Enabled
+                            - Disabled
+                          type: string
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                            type: string
+                          maxProperties: 50
+                          type: object
+                        name:
+                          maxLength: 255
+                          type: string
+                      required:
+                        - config
+                      type: object
+                    modifyHeaders:
+                      properties:
+                        condition:
+                          maxLength: 1000
+                          type: string
+                        config:
+                          properties:
+                            actions:
+                              items:
+                                properties:
+                                  op:
+                                    enum:
+                                      - remove
+                                      - set
+                                    minLength: 1
+                                    type: string
+                                  remove:
+                                    properties:
+                                      key:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                      - key
+                                    type: object
+                                  set:
+                                    properties:
+                                      key:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      value:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                      - key
+                                      - value
+                                    type: object
+                                required:
+                                  - op
+                                type: object
+                              minItems: 1
+                              type: array
+                          type: object
+                        description:
+                          maxLength: 512
+                          type: string
+                        enabled:
+                          enum:
+                            - Enabled
+                            - Disabled
+                          type: string
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                            type: string
+                          maxProperties: 50
+                          type: object
+                        name:
+                          maxLength: 255
+                          type: string
+                      required:
+                        - config
+                      type: object
+                    parentPolicyRef:
+                      properties:
+                        kind:
+                          default: EventGatewayVirtualClusterProducePolicy
+                          enum:
+                            - EventGatewayVirtualClusterProducePolicy
+                          type: string
+                        name:
+                          minLength: 1
+                          type: string
+                        namespace:
+                          type: string
+                      required:
+                        - name
+                      type: object
+                    schemaValidation:
+                      properties:
+                        condition:
+                          maxLength: 1000
+                          type: string
+                        config:
+                          properties:
+                            confluentSchemaRegistry:
+                              properties:
+                                failureMode:
+                                  enum:
+                                    - reject
+                                    - passthrough
+                                    - mark
+                                  maxLength: 253
+                                  type: string
+                                keyValidationAction:
+                                  enum:
+                                    - reject
+                                    - mark
+                                  maxLength: 253
+                                  type: string
+                                schemaRegistry:
+                                  properties:
+                                    kind:
+                                      default: EventGatewaySchemaRegistry
+                                      enum:
+                                        - EventGatewaySchemaRegistry
+                                      type: string
+                                    name:
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      type: string
+                                  required:
+                                    - name
+                                  type: object
+                                validateKey:
+                                  enum:
+                                    - Enabled
+                                    - Disabled
+                                  type: string
+                                validateValue:
+                                  enum:
+                                    - Enabled
+                                    - Disabled
+                                  type: string
+                                valueValidationAction:
+                                  enum:
+                                    - reject
+                                    - mark
+                                  maxLength: 253
+                                  type: string
+                              type: object
+                            inlineSchema:
+                              properties:
+                                failureMode:
+                                  enum:
+                                    - reject
+                                    - passthrough
+                                    - mark
+                                  maxLength: 253
+                                  type: string
+                                key:
+                                  properties:
+                                    avro:
+                                      properties:
+                                        schema:
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                        - schema
+                                      type: object
+                                    json:
+                                      properties:
+                                        schema:
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                        - schema
+                                      type: object
+                                    schemaType:
+                                      enum:
+                                        - avro
+                                        - json
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                    - schemaType
+                                  type: object
+                                keyValidationAction:
+                                  enum:
+                                    - reject
+                                    - mark
+                                  maxLength: 253
+                                  type: string
+                                validateKey:
+                                  enum:
+                                    - Enabled
+                                    - Disabled
+                                  type: string
+                                validateValue:
+                                  enum:
+                                    - Enabled
+                                    - Disabled
+                                  type: string
+                                value:
+                                  properties:
+                                    avro:
+                                      properties:
+                                        schema:
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                        - schema
+                                      type: object
+                                    json:
+                                      properties:
+                                        schema:
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                        - schema
+                                      type: object
+                                    schemaType:
+                                      enum:
+                                        - avro
+                                        - json
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                    - schemaType
+                                  type: object
+                                valueValidationAction:
+                                  enum:
+                                    - reject
+                                    - mark
+                                  maxLength: 253
+                                  type: string
+                              type: object
+                            json:
+                              properties:
+                                failureMode:
+                                  enum:
+                                    - reject
+                                    - passthrough
+                                    - mark
+                                  maxLength: 253
+                                  type: string
+                                keyValidationAction:
+                                  enum:
+                                    - reject
+                                    - mark
+                                  maxLength: 253
+                                  type: string
+                                validateKey:
+                                  enum:
+                                    - Enabled
+                                    - Disabled
+                                  type: string
+                                validateValue:
+                                  enum:
+                                    - Enabled
+                                    - Disabled
+                                  type: string
+                                valueValidationAction:
+                                  enum:
+                                    - reject
+                                    - mark
+                                  maxLength: 253
+                                  type: string
+                              type: object
+                            type:
+                              enum:
+                                - confluentSchemaRegistry
+                                - inlineSchema
+                                - json
+                              minLength: 1
+                              type: string
+                          required:
+                            - type
+                          type: object
+                        description:
+                          maxLength: 512
+                          type: string
+                        enabled:
+                          enum:
+                            - Enabled
+                            - Disabled
+                          type: string
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                            type: string
+                          maxProperties: 50
+                          type: object
+                        name:
+                          maxLength: 255
+                          type: string
+                      required:
+                        - config
+                      type: object
+                    transcode:
+                      properties:
+                        condition:
+                          maxLength: 1000
+                          type: string
+                        config:
+                          properties:
+                            avro:
+                              properties:
+                                failureMode:
+                                  enum:
+                                    - reject
+                                    - passthrough
+                                    - mark
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                onUnknownField:
+                                  enum:
+                                    - fail
+                                    - drop
+                                  maxLength: 253
+                                  type: string
+                                schemaSource:
+                                  properties:
+                                    inline:
+                                      properties:
+                                        inline:
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                        - inline
+                                      type: object
+                                    reference:
+                                      properties:
+                                        schemaRefDestination:
+                                          properties:
+                                            confluentFormat:
+                                              type: object
+                                            none:
+                                              type: object
+                                            recordHeader:
+                                              properties:
+                                                name:
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
+                                              type: object
+                                            type:
+                                              enum:
+                                                - confluentFormat
+                                                - none
+                                                - recordHeader
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - type
+                                          type: object
+                                        schemaRegistry:
+                                          properties:
+                                            kind:
+                                              default: EventGatewaySchemaRegistry
+                                              enum:
+                                                - EventGatewaySchemaRegistry
+                                              type: string
+                                            name:
+                                              minLength: 1
+                                              type: string
+                                            namespace:
+                                              type: string
+                                          required:
+                                            - name
+                                          type: object
+                                        subject:
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        version:
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                        - schemaRefDestination
+                                        - schemaRegistry
+                                        - subject
+                                        - version
+                                      type: object
+                                    type:
+                                      enum:
+                                        - inline
+                                        - reference
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                    - type
+                                  type: object
+                              required:
+                                - failureMode
+                                - schemaSource
+                              type: object
+                            outputFormat:
+                              enum:
+                                - avro
+                              minLength: 1
+                              type: string
+                          required:
+                            - outputFormat
+                          type: object
+                        description:
+                          maxLength: 512
+                          type: string
+                        enabled:
+                          enum:
+                            - Enabled
+                            - Disabled
+                          type: string
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                            type: string
+                          maxProperties: 50
+                          type: object
+                        name:
+                          maxLength: 255
+                          type: string
+                      required:
+                        - config
+                      type: object
+                    type:
+                      enum:
+                        - encrypt
+                        - encryptFields
+                        - maskFields
+                        - modifyHeaders
+                        - schemaValidation
+                        - transcode
+                      minLength: 1
+                      type: string
+                  required:
+                    - type
+                  type: object
+                eventGatewayVirtualClusterRef:
+                  properties:
+                    konnectID:
+                      maxLength: 36
+                      type: string
+                    namespacedRef:
+                      properties:
+                        name:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          maxLength: 253
+                          type: string
+                      required:
+                        - name
+                      type: object
+                    type:
+                      enum:
+                        - konnectID
+                        - namespacedRef
+                      type: string
+                  required:
+                    - type
+                  type: object
+                  x-kubernetes-validations:
+                    - message: when type is namespacedRef, namespacedRef must be set
+                      rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                    - message: when type is namespacedRef, konnectID must not be set
+                      rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                    - message: when type is konnectID, konnectID must be set
+                      rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                    - message: when type is konnectID, namespacedRef must not be set
+                      rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+              required:
+                - eventGatewayVirtualClusterRef
+              type: object
+            status:
+              properties:
+                conditions:
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 8
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                gatewayID:
+                  properties:
+                    id:
+                      maxLength: 256
+                      type: string
+                  type: object
+                id:
+                  maxLength: 256
+                  type: string
+                observedGeneration:
+                  format: int64
+                  type: integer
+                organizationID:
+                  maxLength: 256
+                  type: string
+                serverURL:
+                  maxLength: 512
+                  type: string
+                virtualClusterID:
+                  properties:
+                    id:
+                      maxLength: 256
+                      type: string
+                  type: object
+              type: object
+          type: object
+          x-kubernetes-validations:
+            - message: spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed
+              rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+            - fieldPath: .spec.eventGatewayVirtualClusterRef
+              message: spec.eventGatewayVirtualClusterRef must use namespacedRef
+              optionalOldSelf: true
+              rule: '!has(self.spec.eventGatewayVirtualClusterRef) || self.spec.eventGatewayVirtualClusterRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayVirtualClusterRef) && oldSelf.value().spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef)'
+            - fieldPath: .spec.eventGatewayVirtualClusterRef
+              message: spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect
+              rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef'
+            - fieldPath: .spec.apiSpec.parentPolicyRef
+              message: parentPolicyRef is immutable once the policy has been created in Konnect
+              rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))'
+            - fieldPath: .spec.apiSpec.parentPolicyRef
+              message: parentPolicyRef is required for encryptFields, maskFields and transcode
+              optionalOldSelf: true
+              rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || !(self.spec.apiSpec.type in [''encryptFields'', ''maskFields'', ''transcode'']) || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == self.spec.apiSpec.type && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
+            - fieldPath: .spec.apiSpec.parentPolicyRef
+              message: parentPolicyRef is only supported for encryptFields, modifyHeaders, maskFields and transcode
+              rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''encryptFields'', ''modifyHeaders'', ''maskFields'', ''transcode''])'
+            - message: parentPolicyRef must not reference the EventGatewayVirtualClusterProducePolicy itself
+              rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || self.spec.apiSpec.parentPolicyRef.name != self.metadata.name'
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

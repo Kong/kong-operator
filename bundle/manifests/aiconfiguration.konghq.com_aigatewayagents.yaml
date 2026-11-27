@@ -1,0 +1,600 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  name: aigatewayagents.aiconfiguration.konghq.com
+spec:
+  group: aiconfiguration.konghq.com
+  names:
+    categories:
+      - kong
+    kind: AIGatewayAgent
+    listKind: AIGatewayAgentList
+    plural: aigatewayagents
+    singular: aigatewayagent
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.id
+          name: ID
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Programmed')].status
+          name: Programmed
+          type: string
+        - jsonPath: .status.organizationID
+          name: OrgID
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                aiGatewayRef:
+                  properties:
+                    group:
+                      default: konnect.konghq.com
+                      enum:
+                        - konnect.konghq.com
+                        - aigateway.konghq.com
+                      type: string
+                    kind:
+                      default: KonnectAIGateway
+                      enum:
+                        - KonnectAIGateway
+                        - OnPremAIGateway
+                      type: string
+                    namespacedRef:
+                      properties:
+                        name:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          maxLength: 253
+                          type: string
+                      required:
+                        - name
+                      type: object
+                    type:
+                      default: namespacedRef
+                      enum:
+                        - namespacedRef
+                      type: string
+                  required:
+                    - namespacedRef
+                  type: object
+                  x-kubernetes-validations:
+                    - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                      rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                    - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                      rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
+                apiSpec:
+                  properties:
+                    access:
+                      properties:
+                        acls:
+                          properties:
+                            allow:
+                              properties:
+                                allow:
+                                  items:
+                                    properties:
+                                      kind:
+                                        default: AIGatewayConsumerGroup
+                                        enum:
+                                          - AIGatewayConsumerGroup
+                                        type: string
+                                      name:
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        type: string
+                                    required:
+                                      - name
+                                    type: object
+                                  type: array
+                              required:
+                                - allow
+                              type: object
+                            allowWhen:
+                              properties:
+                                allowWhen:
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                                - allowWhen
+                              type: object
+                            deny:
+                              properties:
+                                deny:
+                                  items:
+                                    properties:
+                                      kind:
+                                        default: AIGatewayConsumerGroup
+                                        enum:
+                                          - AIGatewayConsumerGroup
+                                        type: string
+                                      name:
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        type: string
+                                    required:
+                                      - name
+                                    type: object
+                                  type: array
+                              required:
+                                - deny
+                              type: object
+                            denyWhen:
+                              properties:
+                                denyWhen:
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                                - denyWhen
+                              type: object
+                            type:
+                              enum:
+                                - allow
+                                - deny
+                                - allowWhen
+                                - denyWhen
+                              minLength: 1
+                              type: string
+                          required:
+                            - type
+                          type: object
+                        authStrategies:
+                          items:
+                            properties:
+                              kind:
+                                default: AIGatewayAuthStrategy
+                                enum:
+                                  - AIGatewayAuthStrategy
+                                type: string
+                              name:
+                                minLength: 1
+                                type: string
+                              namespace:
+                                type: string
+                            required:
+                              - name
+                            type: object
+                          maxItems: 1
+                          type: array
+                        identityProviders:
+                          items:
+                            type: string
+                          maxItems: 1
+                          type: array
+                      type: object
+                    config:
+                      properties:
+                        balancer:
+                          properties:
+                            algorithm:
+                              enum:
+                                - consistent-hashing
+                                - least-connections
+                                - lowest-latency
+                                - round-robin
+                              minLength: 1
+                              type: string
+                            consistent-hashing:
+                              properties:
+                                hashOnHeader:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                              required:
+                                - hashOnHeader
+                              type: object
+                            least-connections:
+                              type: object
+                            lowest-latency:
+                              type: object
+                            round-robin:
+                              type: object
+                          required:
+                            - algorithm
+                          type: object
+                        caCertificates:
+                          items:
+                            properties:
+                              kind:
+                                default: AIGatewayCACertificate
+                                enum:
+                                  - AIGatewayCACertificate
+                                type: string
+                              name:
+                                minLength: 1
+                                type: string
+                              namespace:
+                                type: string
+                            required:
+                              - name
+                            type: object
+                          type: array
+                        certificates:
+                          items:
+                            properties:
+                              kind:
+                                default: AIGatewayCertificate
+                                enum:
+                                  - AIGatewayCertificate
+                                type: string
+                              name:
+                                minLength: 1
+                                type: string
+                              namespace:
+                                type: string
+                            required:
+                              - name
+                            type: object
+                          maxItems: 1
+                          type: array
+                        logging:
+                          properties:
+                            maxPayloadSize:
+                              maximum: 2147483646
+                              minimum: 0
+                              type: integer
+                            payloads:
+                              enum:
+                                - Enabled
+                                - Disabled
+                              type: string
+                          type: object
+                        maxRequestBodySize:
+                          maximum: 2147483646
+                          minimum: 0
+                          type: integer
+                        path:
+                          maxLength: 253
+                          pattern: ^/
+                          type: string
+                        protocol:
+                          maxLength: 253
+                          type: string
+                        proxy:
+                          properties:
+                            auth:
+                              properties:
+                                password:
+                                  properties:
+                                    secretRef:
+                                      properties:
+                                        key:
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        name:
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          maxLength: 253
+                                          type: string
+                                      required:
+                                        - key
+                                        - name
+                                      type: object
+                                    type:
+                                      default: inline
+                                      enum:
+                                        - inline
+                                        - secretRef
+                                      type: string
+                                    value:
+                                      maxLength: 4096
+                                      type: string
+                                  required:
+                                    - type
+                                  type: object
+                                  x-kubernetes-validations:
+                                    - message: value required when type=inline; secretRef required when type=secretRef
+                                      rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                                    - message: only one of value and secretRef can be set
+                                      rule: '!(has(self.value) && has(self.secretRef))'
+                                username:
+                                  maxLength: 253
+                                  type: string
+                              type: object
+                            httpProxy:
+                              properties:
+                                host:
+                                  maxLength: 253
+                                  type: string
+                                port:
+                                  maximum: 65535
+                                  minimum: 0
+                                  type: integer
+                              type: object
+                            httpsProxy:
+                              properties:
+                                host:
+                                  maxLength: 253
+                                  type: string
+                                port:
+                                  maximum: 65535
+                                  minimum: 0
+                                  type: integer
+                              type: object
+                            noProxy:
+                              maxLength: 253
+                              type: string
+                            proxyScheme:
+                              enum:
+                                - http
+                              maxLength: 253
+                              type: string
+                          type: object
+                        route:
+                          properties:
+                            headers:
+                              x-kubernetes-preserve-unknown-fields: true
+                            hosts:
+                              items:
+                                type: string
+                              type: array
+                            httpsRedirectStatusCode:
+                              maximum: 599
+                              minimum: 100
+                              type: integer
+                            methods:
+                              items:
+                                type: string
+                              type: array
+                            paths:
+                              items:
+                                type: string
+                              type: array
+                            preserveHost:
+                              enum:
+                                - Enabled
+                                - Disabled
+                              type: string
+                            protocols:
+                              items:
+                                type: string
+                              type: array
+                            regexPriority:
+                              maximum: 2147483647
+                              minimum: -2147483648
+                              type: integer
+                            requestBuffering:
+                              enum:
+                                - Enabled
+                                - Disabled
+                              type: string
+                            responseBuffering:
+                              enum:
+                                - Enabled
+                                - Disabled
+                              type: string
+                            stripPath:
+                              enum:
+                                - Enabled
+                                - Disabled
+                              type: string
+                            tags:
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        targets:
+                          items:
+                            properties:
+                              address:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              failover:
+                                enum:
+                                  - Enabled
+                                  - Disabled
+                                type: string
+                              weight:
+                                maximum: 65535
+                                minimum: 0
+                                type: integer
+                            required:
+                              - address
+                            type: object
+                          type: array
+                        upstream:
+                          properties:
+                            auth:
+                              properties:
+                                aws:
+                                  properties:
+                                    accessKeyID:
+                                      maxLength: 253
+                                      type: string
+                                    assumeRoleArn:
+                                      maxLength: 253
+                                      type: string
+                                    region:
+                                      maxLength: 253
+                                      type: string
+                                    roleSessionName:
+                                      maxLength: 253
+                                      type: string
+                                    secretAccessKey:
+                                      maxLength: 253
+                                      type: string
+                                    sessionToken:
+                                      maxLength: 253
+                                      type: string
+                                    stsEndpointURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
+                                type:
+                                  enum:
+                                    - aws
+                                  minLength: 1
+                                  type: string
+                              required:
+                                - type
+                              type: object
+                          type: object
+                        url:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                      type: object
+                    displayName:
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                    enabled:
+                      enum:
+                        - Enabled
+                        - Disabled
+                      type: string
+                    labels:
+                      additionalProperties:
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                        type: string
+                      maxProperties: 50
+                      type: object
+                    managedBy:
+                      additionalProperties:
+                        maxLength: 127
+                        minLength: 1
+                        pattern: ^[^\s\x00-\x1F\x7F-\x9F]+$
+                        type: string
+                      maxProperties: 5
+                      type: object
+                    name:
+                      maxLength: 256
+                      minLength: 1
+                      pattern: ^[A-Za-z0-9._:@-]{1,256}$
+                      type: string
+                    policies:
+                      items:
+                        properties:
+                          kind:
+                            default: AIGatewayPolicy
+                            enum:
+                              - AIGatewayPolicy
+                            type: string
+                          name:
+                            minLength: 1
+                            type: string
+                          namespace:
+                            type: string
+                        required:
+                          - name
+                        type: object
+                      type: array
+                    type:
+                      enum:
+                        - a2a
+                        - http
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                  required:
+                    - config
+                    - displayName
+                    - name
+                    - type
+                  type: object
+              required:
+                - aiGatewayRef
+              type: object
+            status:
+              properties:
+                conditions:
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 8
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                gatewayID:
+                  properties:
+                    id:
+                      maxLength: 256
+                      type: string
+                  type: object
+                id:
+                  maxLength: 256
+                  type: string
+                observedGeneration:
+                  format: int64
+                  type: integer
+                organizationID:
+                  maxLength: 256
+                  type: string
+                serverURL:
+                  maxLength: 512
+                  type: string
+              type: object
+          type: object
+          x-kubernetes-validations:
+            - message: spec.aiGatewayRef is immutable when an entity is already Programmed
+              rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

@@ -1,0 +1,22 @@
+# Service selecting the operator pods for the webhook servers (9443 conversion,
+# 5443 validating). OLM rewrites the webhookdefinitions to the service it
+# provisions; this Service makes the two ports reachable by the name the
+# webhookdefinitions reference.
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: kong-operator
+  name: gateway-operator-webhook-service
+spec:
+  ports:
+  - name: conversion
+    port: 443
+    protocol: TCP
+    targetPort: 9443
+  - name: validation
+    port: 5443
+    protocol: TCP
+    targetPort: 5443
+  selector:
+    control-plane: controller-manager

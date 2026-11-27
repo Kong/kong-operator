@@ -95,6 +95,8 @@
 
 ### Added
 
+- Add OLM bundle generation for the Red Hat certification.
+  [#6421](https://github.com/Kong/kong-operator/issues/6421)
 - Added the `condition` field to `KongPlugin` and `KongClusterPlugin`. It sets the
   plugin's `condition`, an expression Kong Gateway evaluates for each request
   right before the plugin's `access` phase, skipping the plugin when it is false.
