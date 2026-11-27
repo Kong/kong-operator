@@ -372,6 +372,56 @@ access:
 `,
 		},
 		{
+			name: "conversion-listener: targets replace url, balancer flattens to algorithm and hash_on_header",
+			obj: newMCPServer(&AIGatewayMCPServerConfig{
+				Type: AIGatewayMCPServerConfigTypeConversionListener,
+				ConversionListener: &AIGatewayMCPServerConversionListener{
+					Name:        "flights-targets",
+					DisplayName: "Flights Targets MCP",
+					Config: AIGatewayMCPServerConversionListenerConfig{
+						Targets: []AIGatewayUpstreamTarget{
+							{Address: "mcp-one:8080", Weight: new(100)},
+							{Address: "mcp-two:8080", Failover: new("Enabled")},
+						},
+						Balancer: &AIGatewayMCPServerConversionListenerConfigBalancer{
+							Algorithm:         AIGatewayMCPServerConversionListenerConfigBalancerTypeConsistentHashing,
+							ConsistentHashing: &AIGatewayUpstreamBalancerConsistentHashingConfig{HashOnHeader: "x-user-id"},
+						},
+						Protocol: "https",
+						Path:     "/mcp",
+						Route:    AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp-targets"}},
+					},
+					Tools: []AIGatewayMCPConversionTool{{
+						Name:        "search_flights",
+						Description: "Search available flights",
+						Method:      "GET",
+					}},
+				},
+			}),
+			want: `
+type: conversion-listener
+name: flights-targets
+display_name: Flights Targets MCP
+config:
+  targets:
+  - address: mcp-one:8080
+    weight: 100
+  - address: mcp-two:8080
+    failover: true
+  balancer:
+    algorithm: consistent-hashing
+    hash_on_header: x-user-id
+  protocol: https
+  path: /mcp
+  route:
+    paths: [/mcp-targets]
+tools:
+- name: search_flights
+  description: Search available flights
+  method: GET
+`,
+		},
+		{
 			name: "upstream-server: tools with schemas, tools_cache_ttl_seconds",
 			obj: newMCPServer(&AIGatewayMCPServerConfig{
 				Type: AIGatewayMCPServerConfigTypeUpstreamServer,

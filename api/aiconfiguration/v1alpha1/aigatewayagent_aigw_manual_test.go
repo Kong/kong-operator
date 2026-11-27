@@ -123,6 +123,9 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 		obj     *AIGatewayAgent
 		objects []runtime.Object
 		want    func() *aigw.Agent
+		// assert checks the decoded agent field-by-field, for cases whose aigw
+		// fields have unaliased types that a want value cannot build.
+		assert  func(*testing.T, *aigw.Agent)
 		wantErr string
 	}{
 		{
@@ -173,6 +176,47 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 					MaxPayloadSize: new(512),
 				}
 				return agent
+			},
+		},
+		{
+			name: "targets replace url, balancer flattens to algorithm and hash_on_header",
+			obj: &AIGatewayAgent{
+				Name: "sample-ai-gw-agent-targets", Namespace: "default",
+				Spec: AIGatewayAgentSpec{
+					APISpec: AIGatewayAgentAPISpec{
+						Name: "targets-agent",
+						Type: "a2a",
+						Config: AIGatewayAgentConfig{
+							Targets: []AIGatewayUpstreamTarget{
+								{Address: "a2a-one:8080", Weight: new(100)},
+								{Address: "a2a-two:8080", Failover: new("Enabled")},
+							},
+							Balancer: &AIGatewayAgentConfigBalancer{
+								Algorithm:         AIGatewayAgentConfigBalancerTypeConsistentHashing,
+								ConsistentHashing: &AIGatewayUpstreamBalancerConsistentHashingConfig{HashOnHeader: "x-user-id"},
+							},
+							Protocol: "https",
+							Path:     "/a2a",
+						},
+					},
+				},
+			},
+			// aigw/doc.go doesn't alias UpstreamTarget or UpstreamBalancer either, so
+			// the want values are read off the decoded agent instead of built (same
+			// pattern as the AgentConfig note above).
+			assert: func(t *testing.T, agent *aigw.Agent) {
+				require.Len(t, agent.Config.Targets, 2)
+				require.Equal(t, "a2a-one:8080", agent.Config.Targets[0].Address)
+				require.NotNil(t, agent.Config.Targets[0].Weight)
+				require.Equal(t, 100, *agent.Config.Targets[0].Weight)
+				require.Equal(t, "a2a-two:8080", agent.Config.Targets[1].Address)
+				require.NotNil(t, agent.Config.Targets[1].Failover)
+				require.True(t, *agent.Config.Targets[1].Failover)
+				require.NotNil(t, agent.Config.Balancer)
+				require.Equal(t, "consistent-hashing", agent.Config.Balancer.Algorithm)
+				require.Equal(t, "x-user-id", agent.Config.Balancer.HashOnHeader)
+				require.Equal(t, "https", agent.Config.Protocol)
+				require.Equal(t, "/a2a", agent.Config.Path)
 			},
 		},
 		{
@@ -466,7 +510,12 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.want(), got)
+			if tt.want != nil {
+				require.Equal(t, tt.want(), got)
+			}
+			if tt.assert != nil {
+				tt.assert(t, got)
+			}
 		})
 	}
 }
