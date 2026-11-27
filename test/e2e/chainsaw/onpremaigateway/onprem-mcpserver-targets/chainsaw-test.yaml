@@ -30,6 +30,8 @@ spec:
       value: echo
     - name: echo_deployment_namespace
       value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
     - name: mcp_conversion_listener_name
       value: (join('-', [($test_name), 'mcp-conversion-listener']))
     - name: mcp_passthrough_listener_name
